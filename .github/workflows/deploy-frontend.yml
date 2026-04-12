@@ -40,11 +40,10 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1 # Change if you prefer a different region
+          aws-region: us-east-2 # Change if you prefer a different region
           
       - name: Sync to AWS S3
         run: aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} --delete
 
-      # Optional: Invalidate CloudFront (Uncomment if you decide to place a CloudFront CDN in front of S3)
-      # - name: Invalidate CloudFront Cache
-      #   run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_ID }} --paths "/*"
+      - name: Invalidate CloudFront Cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_ID }} --paths "/*"

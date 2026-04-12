@@ -35,7 +35,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1 # Change if you prefer a different region
+          aws-region: us-east-2 # Change if you prefer a different region
           
       - name: Build SAM Application
         run: sam build
