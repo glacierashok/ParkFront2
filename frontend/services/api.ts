@@ -2,7 +2,8 @@ import { Platform } from 'react-native';
 import { Meetup, RSVP, User, VolunteerLog } from '../types';
 
 let currentUserId: string | null = null;
-const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://127.0.0.1:3000';
+//const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://1÷27.0.0.1:3000';
+const API_BASE_URL = 'https://xyz123abc.execute-api.us-east-1.amazonaws.com/Prod'; 
 
 const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const headers = new Headers(options.headers);
