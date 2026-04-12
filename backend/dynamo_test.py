@@ -1,5 +1,6 @@
 import uuid
 import boto3
+import json
 from datetime import datetime, timezone, timedelta
 
 dynamodb = boto3.resource(
@@ -19,7 +20,8 @@ for table in tables:
     items = response.get('Items', [])
     print(f"Items count: {len(items)}")
     for i, item in enumerate(items, 1):
-        print(f"  Item {i}: {item}")
+        print(f"  Item {i}: {json.dumps(item, indent=2, default=str)}")
+        
 
 
 
