@@ -1,0 +1,50 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+
+# These permissions are necessary to securely connect to AWS using OIDC
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Setup AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+        
+      - name: Configure AWS Credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1 # Change if you prefer a different region
+          
+      - name: Build SAM Application
+        run: sam build
+        
+      - name: Deploy SAM Application
+        run: >
+          sam deploy 
+          --stack-name neighborhood-stride-backend 
+          --resolve-s3 
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+          --no-confirm-changeset 
+          --no-fail-on-empty-changeset

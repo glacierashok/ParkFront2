@@ -1,0 +1,93 @@
+{
+    "level": "ERROR",
+    "location": "lambda_handler:68",
+    "message": "Unhandled error",
+    "timestamp": "2026-04-09 23:56:18,032+0000",
+    "service": "neighborhood-stride",
+    "cold_start": true,
+    "function_name": "NeighborhoodStrideFunction",
+    "function_memory_size": "128",
+    "function_arn": "arn:aws:lambda:us-east-1:012345678912:function:NeighborhoodStrideFunction",
+    "function_request_id": "23bb0aba-b141-4c14-9648-0ff11b0849a2",
+    "exception": "Traceback (most recent call last):\n  File \"/var/task/app.py\", line 44, in lambda_handler\n    result = app.resolve(event, context)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/aws_lambda_powertools/event_handler/api_gateway.py\", line 1918, in resolve\n    response = self._resolve().build(self.current_event, self._cors)\n               ^^^^^^^^^^^^^^^\n  File \"/var/task/aws_lambda_powertools/event_handler/api_gateway.py\", line 2025, in _resolve\n    return self._call_route(route, route_keys)  # pass fn args\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/aws_lambda_powertools/event_handler/api_gateway.py\", line 2103, in _call_route\n    route(router_middlewares=self._router_middlewares, app=self, route_arguments=route_arguments),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/aws_lambda_powertools/event_handler/api_gateway.py\", line 407, in __call__\n    return self._middleware_stack(app)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/aws_lambda_powertools/event_handler/api_gateway.py\", line 1314, in __call__\n    return self.current_middleware(app, self.next_middleware)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/aws_lambda_powertools/event_handler/api_gateway.py\", line 1346, in _registered_api_adapter\n    return app._to_response(next_middleware(**route_args))\n                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/routers/meetups.py\", line 64, in get_all_meetups\n    resp = meetups_table.scan()\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/boto3/resources/factory.py\", line 581, in do_action\n    response = action(self, *args, **kwargs)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/boto3/resources/action.py\", line 88, in __call__\n    response = getattr(parent.meta.client, operation_name)(*args, **params)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/botocore/client.py\", line 565, in _api_call\n    return self._make_api_call(operation_name, kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/task/botocore/client.py\", line 1017, in _make_api_call\n    raise error_class(parsed_response, operation_name)\nbotocore.errorfactory.ResourceNotFoundException: An error occurred (ResourceNotFoundException) when calling the Scan operation: Cannot do operations on a non-existent table",
+    "exception_name": "ResourceNotFoundException",
+    "stack_trace": {
+        "type": "ResourceNotFoundException",
+        "value": "An error occurred (ResourceNotFoundException) when calling the Scan operation: Cannot do operations on a non-existent table",
+        "module": "botocore.errorfactory",
+        "frames": [
+            {
+                "file": "/var/task/app.py",
+                "line": 44,
+                "function": "lambda_handler",
+                "statement": "result = app.resolve(event, context)"
+            },
+            {
+                "file": "/var/task/aws_lambda_powertools/event_handler/api_gateway.py",
+                "line": 1918,
+                "function": "resolve",
+                "statement": "response = self._resolve().build(self.current_event, self._cors)"
+            },
+            {
+                "file": "/var/task/aws_lambda_powertools/event_handler/api_gateway.py",
+                "line": 2025,
+                "function": "_resolve",
+                "statement": "return self._call_route(route, route_keys)  # pass fn args"
+            },
+            {
+                "file": "/var/task/aws_lambda_powertools/event_handler/api_gateway.py",
+                "line": 2103,
+                "function": "_call_route",
+                "statement": "route(router_middlewares=self._router_middlewares, app=self, route_arguments=route_arguments),"
+            },
+            {
+                "file": "/var/task/aws_lambda_powertools/event_handler/api_gateway.py",
+                "line": 407,
+                "function": "__call__",
+                "statement": "return self._middleware_stack(app)"
+            },
+            {
+                "file": "/var/task/aws_lambda_powertools/event_handler/api_gateway.py",
+                "line": 1314,
+                "function": "__call__",
+                "statement": "return self.current_middleware(app, self.next_middleware)"
+            },
+            {
+                "file": "/var/task/aws_lambda_powertools/event_handler/api_gateway.py",
+                "line": 1346,
+                "function": "_registered_api_adapter",
+                "statement": "return app._to_response(next_middleware(**route_args))"
+            },
+            {
+                "file": "/var/task/routers/meetups.py",
+                "line": 64,
+                "function": "get_all_meetups",
+                "statement": "resp = meetups_table.scan()"
+            },
+            {
+                "file": "/var/task/boto3/resources/factory.py",
+                "line": 581,
+                "function": "do_action",
+                "statement": "response = action(self, *args, **kwargs)"
+            },
+            {
+                "file": "/var/task/boto3/resources/action.py",
+                "line": 88,
+                "function": "__call__",
+                "statement": "response = getattr(parent.meta.client, operation_name)(*args, **params)"
+            },
+            {
+                "file": "/var/task/botocore/client.py",
+                "line": 565,
+                "function": "_api_call",
+                "statement": "return self._make_api_call(operation_name, kwargs)"
+            },
+            {
+                "file": "/var/task/botocore/client.py",
+                "line": 1017,
+                "function": "_make_api_call",
+                "statement": "raise error_class(parsed_response, operation_name)"
+            }
+        ]
+    }
+}

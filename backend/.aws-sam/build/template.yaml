@@ -1,0 +1,223 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Neighborhood Stride Backend
+Globals:
+  Function:
+    Timeout: 15
+    Runtime: python3.12
+    Architectures:
+    - arm64
+    Environment:
+      Variables:
+        USERS_TABLE:
+          Ref: UsersTable
+        MEETUPS_TABLE:
+          Ref: MeetupsTable
+        RSVPS_TABLE:
+          Ref: RSVPsTable
+        VLOGS_TABLE:
+          Ref: VolunteerLogsTable
+        POWERTOOLS_SERVICE_NAME: neighborhood-stride
+        LOG_LEVEL: INFO
+  Api:
+    Cors:
+      AllowMethods: '''GET,POST,PUT,PATCH,DELETE,OPTIONS'''
+      AllowHeaders: '''Content-Type,X-User-Id'''
+      AllowOrigin: '''*'''
+Resources:
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Users
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: user_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: user_id
+        KeyType: HASH
+  MeetupsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Meetups
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: meetup_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: meetup_id
+        KeyType: HASH
+  RSVPsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: RSVPs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: meetup_id
+        AttributeType: S
+      - AttributeName: user_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: meetup_id
+        KeyType: HASH
+      - AttributeName: user_id
+        KeyType: RANGE
+      GlobalSecondaryIndexes:
+      - IndexName: UserIndex
+        KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+  VolunteerLogsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: VolunteerLogs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: log_id
+        AttributeType: S
+      - AttributeName: user_id
+        AttributeType: S
+      - AttributeName: status
+        AttributeType: S
+      KeySchema:
+      - AttributeName: log_id
+        KeyType: HASH
+      - AttributeName: user_id
+        KeyType: RANGE
+      GlobalSecondaryIndexes:
+      - IndexName: StatusIndex
+        KeySchema:
+        - AttributeName: status
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+      - IndexName: UserIndex
+        KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+  NeighborhoodStrideFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: NeighborhoodStrideFunction
+      Handler: app.lambda_handler
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: UsersTable
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: MeetupsTable
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: RSVPsTable
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: VolunteerLogsTable
+      Events:
+        Login:
+          Type: Api
+          Properties:
+            Path: /auth/login
+            Method: POST
+        UpdateWaiver:
+          Type: Api
+          Properties:
+            Path: /users/{id}/waiver
+            Method: PUT
+        GetAllUsers:
+          Type: Api
+          Properties:
+            Path: /users
+            Method: GET
+        GetUpcomingMeetup:
+          Type: Api
+          Properties:
+            Path: /meetups/upcoming
+            Method: GET
+        GetAllMeetups:
+          Type: Api
+          Properties:
+            Path: /meetups
+            Method: GET
+        CreateMeetup:
+          Type: Api
+          Properties:
+            Path: /meetups
+            Method: POST
+        CancelMeetup:
+          Type: Api
+          Properties:
+            Path: /meetups/{id}/cancel
+            Method: PATCH
+        GetMeetupRSVPs:
+          Type: Api
+          Properties:
+            Path: /meetups/{id}/rsvps
+            Method: GET
+        GetUserRSVPs:
+          Type: Api
+          Properties:
+            Path: /users/{id}/rsvps
+            Method: GET
+        UpsertRSVP:
+          Type: Api
+          Properties:
+            Path: /rsvps
+            Method: POST
+        MarkAttendance:
+          Type: Api
+          Properties:
+            Path: /rsvps/{id}/attendance
+            Method: PATCH
+        CreateVolunteerLog:
+          Type: Api
+          Properties:
+            Path: /volunteer-logs
+            Method: POST
+        GetUserVolunteerLogs:
+          Type: Api
+          Properties:
+            Path: /users/{id}/volunteer-logs
+            Method: GET
+        GetPendingVolunteerLogs:
+          Type: Api
+          Properties:
+            Path: /volunteer-logs/pending
+            Method: GET
+        ApproveVolunteerLog:
+          Type: Api
+          Properties:
+            Path: /volunteer-logs/{id}/approve
+            Method: PATCH
+        RejectVolunteerLog:
+          Type: Api
+          Properties:
+            Path: /volunteer-logs/{id}
+            Method: DELETE
+    Metadata:
+      SamResourceId: NeighborhoodStrideFunction
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
+  UsersTableName:
+    Description: Users DynamoDB table
+    Value:
+      Ref: UsersTable
+  MeetupsTableName:
+    Description: Meetups DynamoDB table
+    Value:
+      Ref: MeetupsTable
+  RSVPsTableName:
+    Description: RSVPs DynamoDB table
+    Value:
+      Ref: RSVPsTable
+  VolunteerLogsTableName:
+    Description: VolunteerLogs DynamoDB table
+    Value:
+      Ref: VolunteerLogsTable
