@@ -22,7 +22,7 @@ const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): Promise
      throw new Error(`API Error ${response.status}: ${text}`);
   }
   // Some endpoints return 204 or empty string
-  return text ? JSON.parse(text) : null;
+  return (text ? JSON.parse(text) : null) as T;
 };
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
