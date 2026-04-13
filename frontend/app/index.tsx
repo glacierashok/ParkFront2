@@ -157,6 +157,7 @@ export default function IndexScreen() {
   );
 }
 
+
 const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing['2xl'], paddingTop: spacing.xl },
 
