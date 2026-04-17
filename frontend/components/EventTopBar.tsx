@@ -10,6 +10,7 @@ interface EventTopBarProps {
   meetup: Meetup | null;
   loadingInitial: boolean;
   weather: { temp: number; code: number } | null;
+  isClickableHint?: boolean;
 }
 
 export const formatDate = (iso: string) =>
@@ -33,7 +34,7 @@ export const getConditionInfo = (weather: { code: number } | null, isCanceled: b
   return { bg: info.bg, icon: info.icon, label: info.condition };
 };
 
-export default function EventTopBar({ meetup, loadingInitial, weather }: EventTopBarProps) {
+export default function EventTopBar({ meetup, loadingInitial, weather, isClickableHint }: EventTopBarProps) {
   const insets = useSafeAreaInsets();
   const isCanceled = meetup?.status === 'canceled';
   const condition = getConditionInfo(weather, isCanceled || false);
@@ -70,6 +71,12 @@ export default function EventTopBar({ meetup, loadingInitial, weather }: EventTo
           </View>
         )}
       </View>
+      
+      {isClickableHint && (
+        <View style={{ alignItems: 'center', marginTop: spacing.sm, opacity: 0.8 }}>
+          <Ionicons name="chevron-down" size={24} color="#fff" />
+        </View>
+      )}
     </View>
   );
 }

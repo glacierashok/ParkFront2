@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Dimensions,
+  Easing,
   Image,
   Platform,
   Pressable,
@@ -16,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
 import { Meetup } from '../types';
 import { colors, fontSizes, fontWeights, radius, shadows, spacing } from '../constants/theme';
+import { getWeatherInfo } from '../utils/weather';
 import EventTopBar from '../components/EventTopBar';
 import CurrentWeatherStrip from '../components/CurrentWeatherStrip';
 import AppBackground from '../components/AppBackground';
@@ -29,6 +33,30 @@ export default function IndexScreen() {
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [eventWeather, setEventWeather] = useState<{ temp: number, code: number } | null>(null);
   const [currentWeather, setCurrentWeather] = useState<{ temp: number, code: number } | null>(null);
+
+  // Sliding Animation State
+  const [activeView, setActiveView] = useState<'top' | 'bottom'>('top');
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: activeView === 'top' ? 0 : 1,
+      duration: 400,
+      easing: Easing.out(Easing.exp),
+      useNativeDriver: true,
+    }).start();
+  }, [activeView]);
+
+  const topTranslateY = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -SCREEN_HEIGHT],
+  });
+
+  const bottomTranslateY = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [SCREEN_HEIGHT, 0],
+  });
 
   useEffect(() => {
     const now = new Date().toISOString();
@@ -65,9 +93,13 @@ export default function IndexScreen() {
 
   return (
     <AppBackground weather={eventWeather}>
-      <EventTopBar meetup={meetup} loadingInitial={loadingInitial} weather={eventWeather} />
+      <Pressable onPress={() => setActiveView('top')} style={{ zIndex: 10 }}>
+        <EventTopBar meetup={meetup} loadingInitial={loadingInitial} weather={eventWeather} isClickableHint={activeView === 'bottom'} />
+      </Pressable>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <View style={{ flex: 1, overflow: 'hidden' }}>
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: topTranslateY }] }]}>
+          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* ── Brand Welcome ────────────────────────────────────────────── */}
         <View style={styles.brandRow}>
           <View style={styles.brandIconWrap}>
@@ -76,10 +108,7 @@ export default function IndexScreen() {
           <View style={styles.brandTextWrap}>
             <Text style={styles.brandTitle}>Neighborhood Stride</Text>
             <Text style={styles.brandSub}>
-              {meetup && `Join us for our next walk at ${meetup.location}! ${meetup.weather_note} We meet up for fresh air, new friends, and great vibes.`}
-            </Text>
-            <Text style={styles.brandSub}>
-              Join your community for organized weekend walks and jogs. We explore local trails, meet new friends, and build a healthier neighborhood together.
+              {meetup ? `Join us for our next walk at ${meetup.location}! ${meetup.weather_note} We meet up for fresh air, new friends, and great vibes.` : 'Join your community for organized weekend walks and jogs. We explore local trails, meet new friends, and build a healthier neighborhood together.'}
             </Text>
           </View>
         </View>
@@ -149,9 +178,53 @@ export default function IndexScreen() {
             By signing in, you agree to our Terms of Service. A waiver will be required on first login.
           </Text>
         </View>
-      </ScrollView>
 
-      <CurrentWeatherStrip loadingInitial={loadingInitial} weather={currentWeather} />
+        <View style={styles.section}>
+          <Text style={styles.nextNextLabel}>About Our Meetups</Text>
+          <View style={styles.activityCard}>
+            <Text style={styles.activityText}>
+              <Ionicons name="sunny" size={16} color={colors.primaryLight} /> We meet every weekend on Saturday and Sunday, weather permitting. Please keep an eye on this page—we will post updates here if an event is happening or cancelled due to weather conditions.
+            </Text>
+            
+            <Text style={styles.activityText}>
+              <Ionicons name="map" size={16} color={colors.primaryLight} /> We start by gathering at the parking lot, then move to our designated warm-up area to get ready. From there, we head out for a casual walk or jog. Once completed, we regroup in the cool-down area for a quick stretch and recovery. All paces are welcome!
+            </Text>
+
+            <Text style={styles.activityText}>
+              <Ionicons name="document-text" size={16} color={colors.primaryLight} /> By participating, you acknowledge the inherent risks of physical activity and confirm you are in good physical condition. We take occasional community photos, and we strictly require everyone to treat fellow members and volunteers with respect.
+            </Text>
+
+            <Text style={styles.activityText}>
+              <Ionicons name="water" size={16} color={colors.primaryLight} /> Please remember to wear comfortable athletic shoes and bring plenty of water!
+            </Text>
+          </View>
+        </View>
+        
+          </ScrollView>
+        </Animated.View>
+
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: bottomTranslateY }] }]}>
+          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+            <View style={styles.section}>
+              <Text style={styles.nextNextLabel}>The Park & Conditions</Text>
+              <View style={styles.activityCard}>
+                <Text style={styles.activityText}>
+                  <Ionicons name="leaf" size={16} color={colors.primaryLight} /> Our neighborhood park offers scenic, paved pathways surrounded by beautiful greenery—perfect for walking or jogging. It features a spacious parking lot, wide open spaces for our warm-ups, and accessible restrooms.
+                </Text>
+                {currentWeather && (
+                  <Text style={styles.activityText}>
+                    <Ionicons name="thermometer" size={16} color={colors.primaryLight} /> Live Conditions: It is currently {Math.round(currentWeather.temp)}°F with {getWeatherInfo(currentWeather.code).condition.toLowerCase()} weather. {currentWeather.temp < 50 ? 'Make sure to bundle up out there!' : 'It is a fantastic time to get some fresh air!'}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </ScrollView>
+        </Animated.View>
+      </View>
+
+      <Pressable onPress={() => setActiveView('bottom')} style={{ zIndex: 10 }}>
+        <CurrentWeatherStrip loadingInitial={loadingInitial} weather={currentWeather} isClickableHint={activeView === 'top'} />
+      </Pressable>
       
     </AppBackground>
   );
@@ -257,5 +330,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 18,
+  },
+  activityCard: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  activityText: {
+    fontSize: fontSizes.sm,
+    color: 'rgba(255,255,255,0.9)',
+    lineHeight: 22,
   },
 });

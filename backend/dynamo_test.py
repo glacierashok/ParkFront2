@@ -24,8 +24,3 @@ for table in tables:
         
 
 
-
-
-
-
-
