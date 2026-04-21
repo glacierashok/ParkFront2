@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   brandTextWrap: { flex: 1 },
   brandTitle: { fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: '#fff', marginBottom: 4 },
-  brandSub: { fontSize: fontSizes.sm, color: 'rgba(255,255,255,0.8)', lineHeight: 20 },
+  brandSub: { fontSize: fontSizes.lg, color: 'rgba(255,255,255,0.8)', lineHeight: 20 },
 
   // Also Coming Up
   nextNextSection: { paddingHorizontal: spacing.xl, marginTop: spacing.lg },
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
   },
   activityText: {
-    fontSize: fontSizes.sm,
+    fontSize: fontSizes.md,
     color: 'rgba(255,255,255,0.9)',
     lineHeight: 22,
   },
