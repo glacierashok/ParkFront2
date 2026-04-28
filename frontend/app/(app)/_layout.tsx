@@ -29,6 +29,7 @@ export default function AppLayout() {
           paddingTop: spacing.xs,
           paddingBottom: spacing.xs,
           height: 60,
+          display: role === 'neighbor' ? 'none' : 'flex',
         },
         tabBarLabelStyle: {
           fontSize: fontSizes.xs,
