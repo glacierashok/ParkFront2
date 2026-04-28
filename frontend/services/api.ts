@@ -2,6 +2,11 @@ import { Platform } from 'react-native';
 import { Meetup, RSVP, User, VolunteerLog } from '../types';
 
 let currentUserId: string | null = null;
+
+export const setCurrentUserId = (id: string | null) => {
+  currentUserId = id;
+};
+
 //const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://1÷27.0.0.1:3000';
 const API_BASE_URL = 'https://94hmuk0lx1.execute-api.us-east-2.amazonaws.com/Prod';
 
@@ -11,15 +16,15 @@ const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): Promise
   if (currentUserId) {
     headers.set('X-User-Id', currentUserId);
   }
-  
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
   });
-  
+
   const text = await response.text();
   if (!response.ok) {
-     throw new Error(`API Error ${response.status}: ${text}`);
+    throw new Error(`API Error ${response.status}: ${text}`);
   }
   // Some endpoints return 204 or empty string
   return (text ? JSON.parse(text) : null) as T;
@@ -29,11 +34,12 @@ const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): Promise
 
 export const loginUser = async (
   provider: 'apple' | 'google',
-  email: string = `${provider}user@example.com`
+  email: string = `${provider}user@example.com`,
+  name?: string
 ): Promise<User> => {
   const u = await fetchApi<User>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ provider, email })
+    body: JSON.stringify({ provider, email, name })
   });
   currentUserId = u.id;
   return u;

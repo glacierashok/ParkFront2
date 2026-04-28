@@ -79,9 +79,9 @@ export default function WaiverScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
       >
-        <View style={styles.waiverBox}>
+        <ScrollView style={styles.waiverBox} nestedScrollEnabled>
           <Text style={styles.waiverText}>{WAIVER_TEXT}</Text>
-        </View>
+        </ScrollView>
 
         {/* Mandatory checkbox */}
         <Pressable style={styles.checkRow} onPress={() => setAgreed((v) => !v)}>

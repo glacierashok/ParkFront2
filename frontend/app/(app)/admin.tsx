@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as api from '../../services/api';
 import { Meetup, User, VolunteerLog } from '../../types';
@@ -121,8 +123,10 @@ function EventsTab() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ location: '', scheduled_time: '', weather_note: '' });
+  const [form, setForm] = useState({ location: '', scheduled_time: new Date(), weather_note: '' });
   const [creating, setCreating] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const load = useCallback(async () => {
     const m = await api.getAllMeetups();
@@ -155,13 +159,13 @@ function EventsTab() {
     try {
       const newMeetup = await api.createMeetup({
         location: form.location,
-        scheduled_time: new Date(form.scheduled_time).toISOString(),
+        scheduled_time: form.scheduled_time.toISOString(),
         status: 'active',
         weather_note: form.weather_note,
       });
       setMeetups((prev) => [...prev, newMeetup]);
       setShowCreate(false);
-      setForm({ location: '', scheduled_time: '', weather_note: '' });
+      setForm({ location: '', scheduled_time: new Date(), weather_note: '' });
     } catch {
       Alert.alert('Error', 'Could not create meetup.');
     } finally {
@@ -220,13 +224,75 @@ function EventsTab() {
               value={form.location}
               onChangeText={(v) => setForm((f) => ({ ...f, location: v }))}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Date/Time (e.g. 2026-04-12 08:00)"
-              placeholderTextColor={colors.muted}
-              value={form.scheduled_time}
-              onChangeText={(v) => setForm((f) => ({ ...f, scheduled_time: v }))}
-            />
+            {Platform.OS === 'web' ? (
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: spacing.sm }}>
+                {/* @ts-ignore */}
+                <input
+                  type="date"
+                  style={{ padding: 10, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, flex: 1, backgroundColor: colors.background, color: colors.text, fontSize: fontSizes.md }}
+                  value={form.scheduled_time.toISOString().split('T')[0]}
+                  onChange={(e: any) => {
+                    const newDate = new Date(form.scheduled_time);
+                    const [y, m, d] = e.target.value.split('-');
+                    if(y) {
+                      newDate.setFullYear(parseInt(y), parseInt(m)-1, parseInt(d));
+                      setForm(f => ({ ...f, scheduled_time: newDate }));
+                    }
+                  }}
+                />
+                {/* @ts-ignore */}
+                <input
+                  type="time"
+                  style={{ padding: 10, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, flex: 1, backgroundColor: colors.background, color: colors.text, fontSize: fontSizes.md }}
+                  value={form.scheduled_time.toTimeString().slice(0, 5)}
+                  onChange={(e: any) => {
+                    const newDate = new Date(form.scheduled_time);
+                    const [h, min] = e.target.value.split(':');
+                    if(h) {
+                      newDate.setHours(parseInt(h), parseInt(min));
+                      setForm(f => ({ ...f, scheduled_time: newDate }));
+                    }
+                  }}
+                />
+              </View>
+            ) : Platform.OS === 'ios' ? (
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: spacing.sm, alignItems: 'center' }}>
+                <Text style={{ color: colors.textSecondary }}>Date/Time:</Text>
+                <DateTimePicker
+                  value={form.scheduled_time}
+                  mode="datetime"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    const currentDate = selectedDate || form.scheduled_time;
+                    setForm(f => ({ ...f, scheduled_time: currentDate }));
+                  }}
+                />
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: spacing.sm }}>
+                <Pressable style={[styles.input, { flex: 1, marginBottom: 0, justifyContent: 'center' }]} onPress={() => setShowDatePicker(true)}>
+                  <Text style={{ color: colors.text }}>{form.scheduled_time.toLocaleDateString()}</Text>
+                </Pressable>
+                <Pressable style={[styles.input, { flex: 1, marginBottom: 0, justifyContent: 'center' }]} onPress={() => setShowTimePicker(true)}>
+                  <Text style={{ color: colors.text }}>{form.scheduled_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                </Pressable>
+                {(showDatePicker || showTimePicker) && (
+                  <DateTimePicker
+                    value={form.scheduled_time}
+                    mode={showDatePicker ? 'date' : 'time'}
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      const currentDate = selectedDate || form.scheduled_time;
+                      setShowDatePicker(false);
+                      setShowTimePicker(false);
+                      if (event.type === 'set') {
+                        setForm(f => ({ ...f, scheduled_time: currentDate }));
+                      }
+                    }}
+                  />
+                )}
+              </View>
+            )}
             <TextInput
               style={styles.input}
               placeholder="Weather Note (optional)"

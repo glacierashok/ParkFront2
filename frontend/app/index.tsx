@@ -23,6 +23,7 @@ import { getWeatherInfo } from '../utils/weather';
 import EventTopBar from '../components/EventTopBar';
 import CurrentWeatherStrip from '../components/CurrentWeatherStrip';
 import AppBackground from '../components/AppBackground';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function IndexScreen() {
   const { user, login, isLoading } = useAuth();
@@ -33,6 +34,13 @@ export default function IndexScreen() {
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [eventWeather, setEventWeather] = useState<{ temp: number, code: number } | null>(null);
   const [currentWeather, setCurrentWeather] = useState<{ temp: number, code: number } | null>(null);
+  const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
+
+  const googleAuthAvailable = Platform.select({
+    ios: !!process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    android: !!process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    default: !!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
 
   // Sliding Animation State
   const [activeView, setActiveView] = useState<'top' | 'bottom'>('top');
@@ -72,6 +80,8 @@ export default function IndexScreen() {
       setLoadingInitial(false);
     });
     api.getWeatherByTime(now).then(setCurrentWeather);
+    
+    AppleAuthentication.isAvailableAsync().then(setAppleAuthAvailable);
   }, []);
 
   // Redirect if already logged in
@@ -83,11 +93,16 @@ export default function IndexScreen() {
   }, [user]);
 
   const handleLogin = async (provider: 'apple' | 'google') => {
-    const loggedInUser = await login(provider);
-    if (!loggedInUser.waiver_accepted) {
-      router.replace('/auth/waiver');
-    } else {
-      router.replace('/(app)/dashboard');
+    try {
+      const loggedInUser = await login(provider);
+      if (!loggedInUser.waiver_accepted) {
+        router.replace('/auth/waiver');
+      } else {
+        router.replace('/(app)/dashboard');
+      }
+    } catch (e) {
+      // Login cancelled or failed, handled securely without crashing
+      console.log('User login flow ended prematurely');
     }
   };
 
@@ -143,36 +158,40 @@ export default function IndexScreen() {
         )}
 
         {/* ── OAuth Buttons ────────────────────────────────────────────── */}
-        <View style={[styles.section, { display: 'none' }]} >
-          <Pressable
-            style={[styles.oauthBtn, styles.googleBtn, isLoading && styles.btnDisabled]}
-            onPress={() => handleLogin('google')}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <Ionicons name="logo-google" size={20} color="#fff" />
-                <Text style={styles.oauthBtnText}>Sign in with Google</Text>
-              </>
-            )}
-          </Pressable>
+        <View style={[styles.section]} >
+          {googleAuthAvailable && (
+            <Pressable
+              style={[styles.oauthBtn, styles.googleBtn, isLoading && styles.btnDisabled]}
+              onPress={() => handleLogin('google')}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={20} color="#fff" />
+                  <Text style={styles.oauthBtnText}>Sign in with Google</Text>
+                </>
+              )}
+            </Pressable>
+          )}
 
-          <Pressable
-            style={[styles.oauthBtn, styles.appleBtn, isLoading && styles.btnDisabled]}
-            onPress={() => handleLogin('apple')}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <Ionicons name="logo-apple" size={22} color="#fff" />
-                <Text style={styles.oauthBtnText}>Sign in with Apple</Text>
-              </>
-            )}
-          </Pressable>
+          {appleAuthAvailable && (
+            <Pressable
+              style={[styles.oauthBtn, styles.appleBtn, isLoading && styles.btnDisabled]}
+              onPress={() => handleLogin('apple')}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-apple" size={22} color="#fff" />
+                  <Text style={styles.oauthBtnText}>Sign in with Apple</Text>
+                </>
+              )}
+            </Pressable>
+          )}
 
           <Text style={styles.disclaimer}>
             By signing in, you agree to our Terms of Service. A waiver will be required on first login.
