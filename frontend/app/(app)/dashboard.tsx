@@ -233,10 +233,10 @@ export default function DashboardScreen() {
             <View style={styles.nextNextSection}>
               <Text style={styles.sectionTitle}>Also Coming Up</Text>
               {futureMeetups.map((m) => (
-                <View key={m.id} style={[styles.nextNextCard, { marginBottom: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                <View key={m.id} style={[styles.nextNextCard, { marginBottom: spacing.md, flexDirection: 'column' }]}>
 
-                  {/* Left: icon + date/time + weather */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
+                  {/* Row 1: icon + date/time + weather */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                     <View style={styles.nextNextIconWrap}>
                       <Ionicons name="calendar-outline" size={22} color={colors.primary} />
                     </View>
@@ -248,15 +248,13 @@ export default function DashboardScreen() {
                           day: 'numeric',
                         })}
                       </Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 }}>
-                        <Text style={styles.nextNextTime}>
-                          {new Date(m.scheduled_time).toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true,
-                          })}
-                        </Text>
-                      </View>
+                      <Text style={[styles.nextNextTime, { marginTop: 2 }]}>
+                        {new Date(m.scheduled_time).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true,
+                        })}
+                      </Text>
                     </View>
                     {weatherMap[m.id] && (
                       <View style={styles.nextNextWeather}>
@@ -268,18 +266,8 @@ export default function DashboardScreen() {
                     )}
                   </View>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                    <Text style={styles.nextNextTime}>
-                      {new Date(m.scheduled_time).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true,
-                      })}
-                    </Text>
-                  </View>
-
-                  {/* Right: RSVP buttons */}
-                  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  {/* Row 2: RSVP buttons */}
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
                     <Pressable
                       style={[
                         styles.nextNextRsvpBtn,
