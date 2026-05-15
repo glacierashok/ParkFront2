@@ -20,6 +20,7 @@ import { colors, fontSizes, fontWeights, radius, shadows, spacing } from '../../
 import EventTopBar from '../../components/EventTopBar';
 import AppBackground from '../../components/AppBackground';
 import CurrentWeatherStrip from '../../components/CurrentWeatherStrip';
+import ParkMapModal from '../../components/ParkMapModal';
 
 export default function DashboardScreen() {
   const { user, logout } = useAuth();
@@ -37,6 +38,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [weather, setWeather] = useState<{ temp: number, code: number } | null>(null);
   const [currentWeather, setCurrentWeather] = useState<{ temp: number, code: number } | null>(null);
+  const [mapVisible, setMapVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -134,9 +136,19 @@ export default function DashboardScreen() {
                 <Text style={styles.greetingName}>{user?.full_name ?? 'Neighbor'} 👋</Text>
               </View>
             </View>
-            <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={24} color={colors.textSecondary} />
-            </Pressable>
+            <View style={styles.greetingActions}>
+              <Pressable
+                style={styles.mapBtn}
+                onPress={() => setMapVisible(true)}
+                accessibilityLabel="View park trail map"
+                accessibilityRole="button"
+              >
+                <Ionicons name="map-outline" size={22} color={colors.primary} />
+              </Pressable>
+              <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+                <Ionicons name="log-out-outline" size={24} color={colors.textSecondary} />
+              </Pressable>
+            </View>
           </View>
 
           {/* ── Stats row ────────────────────────────────────────────── */}
@@ -236,11 +248,11 @@ export default function DashboardScreen() {
                 <View key={m.id} style={[styles.nextNextCard, { marginBottom: spacing.md, flexDirection: 'column' }]}>
 
                   {/* Row 1: icon + date/time + weather */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
                     <View style={styles.nextNextIconWrap}>
                       <Ionicons name="calendar-outline" size={22} color={colors.primary} />
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, alignItems: 'flex-start' }}>
                       <Text style={styles.nextNextDate}>
                         {new Date(m.scheduled_time).toLocaleDateString('en-US', {
                           weekday: 'long',
@@ -318,6 +330,8 @@ export default function DashboardScreen() {
       <View style={{ marginBottom: user?.role === 'neighbor' ? 0 : 60 }}>
         <CurrentWeatherStrip loadingInitial={loadingInitial} weather={currentWeather} />
       </View>
+
+      <ParkMapModal visible={mapVisible} onClose={() => setMapVisible(false)} />
     </AppBackground>
   );
 }
@@ -328,6 +342,7 @@ const styles = StyleSheet.create({
   // Greeting Section
   greetingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl, paddingHorizontal: spacing.xs },
   greetingLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  greetingActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   avatarPlaceholder: {
     width: 50, height: 50,
     borderRadius: 25,
@@ -341,6 +356,14 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     backgroundColor: colors.surface,
     borderRadius: radius.full,
+    ...shadows.sm
+  },
+  mapBtn: {
+    padding: spacing.sm,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.4)',
     ...shadows.sm
   },
 
@@ -389,7 +412,7 @@ const styles = StyleSheet.create({
   nextNextInfo: { flex: 1 },
   nextNextDate: { fontSize: fontSizes.md, fontWeight: fontWeights.bold, color: colors.text },
   nextNextTime: { fontSize: fontSizes.sm, color: colors.textSecondary, marginTop: 2 },
-  nextNextWeather: { alignItems: 'center', backgroundColor: colors.primaryLight, padding: spacing.sm, borderRadius: radius.lg, minWidth: 60 },
+  nextNextWeather: { alignItems: 'flex-end', backgroundColor: colors.primaryLight, padding: spacing.sm, borderRadius: radius.lg, minWidth: 60 },
   nextNextWeatherText: { fontSize: fontSizes.xs, fontWeight: fontWeights.semibold, color: colors.primary, marginTop: 4, textAlign: 'center' },
   nextNextRsvpContainer: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.md },
   nextNextRsvpBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1.5, gap: 6 },
