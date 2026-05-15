@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { createElement } from 'react';
 import {
   Modal,
   Pressable,
@@ -8,7 +8,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import WebView from 'react-native-webview';
 import { colors, fontSizes, fontWeights, radius, spacing } from '../constants/theme';
 
 // ─── Glacier Ridge Metro Park – Marsh Hawk Loop ───────────────────────────────
@@ -365,20 +364,21 @@ export default function ParkMapModal({ visible, onClose }: ParkMapModalProps) {
         </Pressable>
       </View>
 
-      {/* Map */}
+      {/* Map — iframe works on all browsers; srcdoc inlines the HTML; allow="geolocation" enables GPS */}
       <View style={styles.mapContainer}>
-        <WebView
-          source={{ html: mapHTML }}
-          style={styles.webView}
-          geolocationEnabled
-          javaScriptEnabled
-          domStorageEnabled
-          allowsInlineMediaPlayback
-          mediaPlaybackRequiresUserAction={false}
-          originWhitelist={['*']}
-          // Required for GPS on web
-          allowsBackForwardNavigationGestures={false}
-        />
+        {createElement('iframe', {
+          srcDoc: mapHTML,
+          style: {
+            flex: 1,
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            display: 'block',
+            backgroundColor: '#0f172a',
+          },
+          allow: 'geolocation',
+          title: 'Marsh Hawk Trail Map',
+        })}
       </View>
     </Modal>
   );
@@ -431,9 +431,7 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
     backgroundColor: '#0f172a',
-  },
-  webView: {
-    flex: 1,
-    backgroundColor: '#0f172a',
+    // Height must be explicit for iframe to fill correctly on web
+    minHeight: 400,
   },
 });
