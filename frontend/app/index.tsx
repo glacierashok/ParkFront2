@@ -23,6 +23,7 @@ import { getWeatherInfo } from '../utils/weather';
 import EventTopBar from '../components/EventTopBar';
 import CurrentWeatherStrip from '../components/CurrentWeatherStrip';
 import AppBackground from '../components/AppBackground';
+import ParkMapModal from '../components/ParkMapModal';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function IndexScreen() {
@@ -35,6 +36,7 @@ export default function IndexScreen() {
   const [eventWeather, setEventWeather] = useState<{ temp: number, code: number } | null>(null);
   const [currentWeather, setCurrentWeather] = useState<{ temp: number, code: number } | null>(null);
   const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
+  const [mapVisible, setMapVisible] = useState(false);
 
   const googleAuthAvailable = Platform.select({
     ios: !!process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
@@ -127,6 +129,18 @@ export default function IndexScreen() {
             </Text>
           </View>
         </View>
+
+        {/* ── Map Trail Button ─────────────────────────────────────────── */}
+        <Pressable
+          style={({ pressed }) => [styles.mapTrailBtn, pressed && { opacity: 0.75 }]}
+          onPress={() => setMapVisible(true)}
+          accessibilityLabel="View park trail map"
+          accessibilityRole="button"
+        >
+          <Ionicons name="map-outline" size={18} color="#fff" />
+          <Text style={styles.mapTrailBtnText}>View Park Trail Map</Text>
+          <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.6)" />
+        </Pressable>
 
         {/* ── Also Coming Up ───────────────────────────────────────────── */}
         {nextNextMeetup && (
@@ -244,7 +258,8 @@ export default function IndexScreen() {
       <Pressable onPress={() => setActiveView('bottom')} style={{ zIndex: 10 }}>
         <CurrentWeatherStrip loadingInitial={loadingInitial} weather={currentWeather} isClickableHint={activeView === 'top'} />
       </Pressable>
-      
+
+      <ParkMapModal visible={mapVisible} onClose={() => setMapVisible(false)} />
     </AppBackground>
   );
 }
@@ -261,6 +276,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     gap: spacing.md,
   },
+  mapTrailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    backgroundColor: 'rgba(59, 130, 246, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.45)',
+    borderRadius: radius.full,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  mapTrailBtnText: {
+    flex: 1,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: '#fff',
+  },
+
   brandIconWrap: {
     width: 64, height: 64,
     borderRadius: 32,
