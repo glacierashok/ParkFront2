@@ -8,12 +8,24 @@ export interface User {
   waiver_timestamp: string | null;
 }
 
+export interface Park {
+  id: string;
+  name: string;
+  location: string;
+  trail?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface Meetup {
   id: string;
   scheduled_time: string;
-  location: string;
   status: 'active' | 'canceled';
   weather_note: string;
+  park_id?: string;
+  // Fallbacks for older meetups
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface RSVP {
@@ -31,4 +43,9 @@ export interface VolunteerLog {
   assigned_role: string;
   hours_credited: number;
   status: 'pending' | 'verified';
+}
+
+export interface VolunteerRole {
+  id: string;
+  name: string;
 }

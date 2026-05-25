@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { getWeatherInfo } from '../../utils/weather';
@@ -22,6 +23,21 @@ import AppBackground from '../../components/AppBackground';
 import CurrentWeatherStrip from '../../components/CurrentWeatherStrip';
 import ParkMapModal from '../../components/ParkMapModal';
 
+const PARK_COORDS = { latitude: 40.7812, longitude: -73.9665 }; // Placeholder coords
+const GEOFENCE_RADIUS_METERS = 300;
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // metres
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export default function DashboardScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -39,17 +55,29 @@ export default function DashboardScreen() {
   const [weather, setWeather] = useState<{ temp: number, code: number } | null>(null);
   const [currentWeather, setCurrentWeather] = useState<{ temp: number, code: number } | null>(null);
   const [mapVisible, setMapVisible] = useState(false);
+  const [inPark, setInPark] = useState(false);
+  const [checkInVisible, setCheckInVisible] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+  const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
+  const [parks, setParks] = useState<Record<string, import('../../types').Park>>({});
 
   const loadData = useCallback(async () => {
     if (!user) return;
     const now = new Date().toISOString();
-    const [allMeetups, userRSVPs] = await Promise.all([
+    const nowMs = Date.now();
+    const twoHours = 2 * 60 * 60 * 1000;
+    const [allMeetups, userRSVPs, allParks] = await Promise.all([
       api.getAllMeetups(),
       api.getUserRSVPs(user.id),
+      api.getAllParks(),
     ]);
-    // Filter future active meetups sorted ascending
+
+    const parksMap: Record<string, import('../../types').Park> = {};
+    allParks.forEach(p => { parksMap[p.id] = p; });
+    setParks(parksMap);
+    // Filter future active meetups (keep visible until 2 hours after start)
     const futureMeetupsSorted = allMeetups
-      .filter((m) => m.status === 'active' && m.scheduled_time > now)
+      .filter((m) => m.status === 'active' && (new Date(m.scheduled_time).getTime() + twoHours) > nowMs)
       .sort((a, b) => a.scheduled_time.localeCompare(b.scheduled_time));
 
     const upcomingMeetup = futureMeetupsSorted[0] ?? null;
@@ -74,7 +102,7 @@ export default function DashboardScreen() {
       });
     });
     setRsvpsMap(newRsvpsMap);
-        
+
     setAttendedCount(userRSVPs.filter((r) => r.attended).length);
     api.getWeatherByTime(now).then(setCurrentWeather);
   }, [user]);
@@ -82,6 +110,50 @@ export default function DashboardScreen() {
   useEffect(() => {
     loadData().finally(() => setLoadingInitial(false));
   }, [loadData]);
+
+  useEffect(() => {
+    if (!meetup) return;
+
+    const nowMs = Date.now();
+    const eventMs = new Date(meetup.scheduled_time).getTime();
+    const oneHour = 60 * 60 * 1000;
+    const twoHours = 2 * oneHour;
+
+    if (nowMs >= eventMs - oneHour && nowMs <= eventMs + twoHours) {
+      setCheckInVisible(true);
+    } else {
+      setCheckInVisible(false);
+    }
+  }, [meetup]);
+
+  useEffect(() => {
+    if (!checkInVisible) return;
+
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      let location = await Location.getCurrentPositionAsync({});
+      setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+
+      let targetLat = PARK_COORDS.latitude;
+      let targetLng = PARK_COORDS.longitude;
+      if (meetup?.park_id && parks[meetup.park_id]) {
+        targetLat = parks[meetup.park_id].latitude ?? targetLat;
+        targetLng = parks[meetup.park_id].longitude ?? targetLng;
+      } else if (meetup?.latitude !== undefined && meetup?.longitude !== undefined) {
+        targetLat = meetup.latitude;
+        targetLng = meetup.longitude;
+      }
+
+      const distance = getDistance(
+        location.coords.latitude, location.coords.longitude,
+        targetLat, targetLng
+      );
+      setCalculatedDistance(distance);
+      setInPark(distance <= GEOFENCE_RADIUS_METERS);
+    })();
+  }, [checkInVisible, meetup, parks]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -106,6 +178,29 @@ export default function DashboardScreen() {
     }
   };
 
+  const handleCheckIn = async () => {
+    if (!user || !meetup) return;
+    setRsvpLoading(meetup.id);
+    try {
+      let currentRsvpId = rsvp?.id;
+      if (!rsvp) {
+        const newRsvp = await api.upsertRSVP(meetup.id, user.id, 'going');
+        setRsvp(newRsvp);
+        currentRsvpId = newRsvp.id;
+      }
+
+      if (currentRsvpId) {
+        const updated = await api.markAttendance(currentRsvpId, true, meetup.id, user.id);
+        setRsvp(updated);
+        Alert.alert("Checked In!", "You have successfully checked in to the park!");
+      }
+    } catch (e) {
+      Alert.alert("Error", "Could not check in. Please try again.");
+    } finally {
+      setRsvpLoading(null);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     router.replace('/');
@@ -115,7 +210,7 @@ export default function DashboardScreen() {
 
   return (
     <AppBackground weather={weather}>
-      <EventTopBar meetup={meetup} loadingInitial={loadingInitial} weather={weather} />
+      <EventTopBar meetup={meetup} park={meetup?.park_id ? parks[meetup.park_id] : null} loadingInitial={loadingInitial} weather={weather} />
 
       <View style={{ flex: 1, overflow: 'hidden' }}>
         <ScrollView
@@ -198,43 +293,82 @@ export default function DashboardScreen() {
                 </View>
               ) : (
                 <>
-                  <Text style={styles.sectionTitle}>Are you coming?</Text>
-                  <View style={styles.rsvpContainer}>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.rsvpBtnLarge,
-                        styles.rsvpBtnGoing,
-                        rsvp?.intent === 'going' && styles.rsvpBtnActiveGoing,
-                        rsvpLoading === meetup.id && styles.btnDisabled,
-                        pressed && { opacity: 0.8 }
-                      ]}
-                      onPress={() => handleRSVP(meetup, 'going')}
-                      disabled={!!rsvpLoading}
-                    >
-                      <Ionicons name="checkmark-circle" size={24} color={rsvp?.intent === 'going' ? '#fff' : colors.success} />
-                      <Text style={[styles.rsvpBtnTextLarge, rsvp?.intent === 'going' ? { color: '#fff' } : { color: colors.success }]}>
-                        I'll Be There
-                      </Text>
-                    </Pressable>
+                  {!checkInVisible && (
+                    <>
+                      <Text style={styles.sectionTitle}>Are you coming?</Text>
+                      <View style={styles.rsvpContainer}>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.rsvpBtnLarge,
+                            styles.rsvpBtnGoing,
+                            rsvp?.intent === 'going' && styles.rsvpBtnActiveGoing,
+                            rsvpLoading === meetup.id && styles.btnDisabled,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => handleRSVP(meetup, 'going')}
+                          disabled={!!rsvpLoading}
+                        >
+                          <Ionicons name="checkmark-circle" size={24} color={rsvp?.intent === 'going' ? '#fff' : colors.success} />
+                          <Text style={[styles.rsvpBtnTextLarge, rsvp?.intent === 'going' ? { color: '#fff' } : { color: colors.success }]}>
+                            I'll Be There
+                          </Text>
+                        </Pressable>
 
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.rsvpBtnLarge,
-                        styles.rsvpBtnNotGoing,
-                        rsvp?.intent === 'not_going' && styles.rsvpBtnActiveNotGoing,
-                        rsvpLoading === meetup.id && styles.btnDisabled,
-                        pressed && { opacity: 0.8 }
-                      ]}
-                      onPress={() => handleRSVP(meetup, 'not_going')}
-                      disabled={!!rsvpLoading}
-                    >
-                      <Ionicons name="close-circle" size={24} color={rsvp?.intent === 'not_going' ? '#fff' : colors.alert} />
-                      <Text style={[styles.rsvpBtnTextLarge, rsvp?.intent === 'not_going' ? { color: '#fff' } : { color: colors.alert }]}>
-                        Can't Make It
-                      </Text>
-                    </Pressable>
-                  </View>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.rsvpBtnLarge,
+                            styles.rsvpBtnNotGoing,
+                            rsvp?.intent === 'not_going' && styles.rsvpBtnActiveNotGoing,
+                            rsvpLoading === meetup.id && styles.btnDisabled,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => handleRSVP(meetup, 'not_going')}
+                          disabled={!!rsvpLoading}
+                        >
+                          <Ionicons name="close-circle" size={24} color={rsvp?.intent === 'not_going' ? '#fff' : colors.alert} />
+                          <Text style={[styles.rsvpBtnTextLarge, rsvp?.intent === 'not_going' ? { color: '#fff' } : { color: colors.alert }]}>
+                            Can't Make It
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  )}
                   {rsvpLoading === meetup.id && <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />}
+
+                  {checkInVisible && !rsvp?.attended && (
+                    <View style={{ marginTop: spacing.lg }}>
+                      <Text style={styles.sectionTitle}>Event Check-In</Text>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.rsvpBtnLarge,
+                          {
+                            backgroundColor: inPark ? colors.primary : 'rgba(59, 130, 246, 0.12)',
+                            borderColor: colors.primary,
+                            borderWidth: 2
+                          },
+                          pressed && inPark && { opacity: 0.8 }
+                        ]}
+                        onPress={handleCheckIn}
+                        disabled={!inPark || !!rsvpLoading}
+                      >
+                        <Ionicons name="location" size={24} color={inPark ? '#fff' : colors.primary} />
+                        <Text style={[styles.rsvpBtnTextLarge, { color: inPark ? '#fff' : colors.primary }]}>
+                          {inPark ? "Check In Now" : `Check In (${calculatedDistance !== null ? Math.round(calculatedDistance) + 'm' : 'Too'} far)`}
+                        </Text>
+                      </Pressable>
+                      {!inPark && userLocation && (
+                        <Text style={{ fontSize: fontSizes.xs, color: 'rgba(255, 255, 255, 0.7)', marginTop: spacing.xs, textAlign: 'center' }}>
+                          Current GPS: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)} | Target: {(meetup?.park_id && parks[meetup.park_id]?.latitude ? parks[meetup.park_id].latitude! : (meetup?.latitude ?? PARK_COORDS.latitude)).toFixed(4)}, {(meetup?.park_id && parks[meetup.park_id]?.longitude ? parks[meetup.park_id].longitude! : (meetup?.longitude ?? PARK_COORDS.longitude)).toFixed(4)}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                  {checkInVisible && rsvp?.attended && (
+                    <View style={{ marginTop: spacing.lg, alignItems: 'center', backgroundColor: colors.successLight, padding: spacing.md, borderRadius: radius.md }}>
+                      <Ionicons name="checkmark-circle" size={32} color={colors.success} />
+                      <Text style={{ fontSize: fontSizes.md, fontWeight: fontWeights.bold, color: colors.success, marginTop: spacing.xs }}>You are checked in!</Text>
+                    </View>
+                  )}
                 </>
               )}
             </View>
@@ -331,7 +465,7 @@ export default function DashboardScreen() {
         <CurrentWeatherStrip loadingInitial={loadingInitial} weather={currentWeather} />
       </View>
 
-      <ParkMapModal visible={mapVisible} onClose={() => setMapVisible(false)} />
+      <ParkMapModal visible={mapVisible} onClose={() => setMapVisible(false)} meetup={meetup} park={meetup?.park_id ? parks[meetup.park_id] : undefined} />
     </AppBackground>
   );
 }

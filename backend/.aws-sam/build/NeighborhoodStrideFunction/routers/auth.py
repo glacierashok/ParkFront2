@@ -55,6 +55,7 @@ def login():
     body: dict[str, Any] = router.current_event.json_body
     email: str  = body.get("email", "").strip().lower()
     provider: str = body.get("provider", "")
+    full_name: str = body.get("name") or ""
 
     if not email or provider not in ("google", "apple"):
         return {"statusCode": 400, "body": {"message": "provider and email are required"}}
@@ -68,11 +69,22 @@ def login():
 
     if items:
         existing = items[0]
+        
+        # Build update expression dynamically based on what we need to update
+        update_expr = "SET #prov = :p"
+        expr_names = {"#prov": "provider"}
+        expr_values = {":p": provider}
+        
+        if full_name and existing.get("full_name") != full_name:
+            update_expr += ", full_name = :fn"
+            expr_values[":fn"] = full_name
+            existing["full_name"] = full_name
+            
         users_table.update_item(
             Key={"user_id": existing["user_id"]},
-            UpdateExpression="SET #prov = :p",
-            ExpressionAttributeNames={"#prov": "provider"},
-            ExpressionAttributeValues={":p": provider},
+            UpdateExpression=update_expr,
+            ExpressionAttributeNames=expr_names,
+            ExpressionAttributeValues=expr_values,
         )
         existing["provider"] = provider
         return {"statusCode": 200, "body": _to_user(existing)}
@@ -84,7 +96,7 @@ def login():
         "user_id":          user_id,
         "email":            email,
         "provider":         provider,
-        "full_name":        email.split("@")[0],
+        "full_name":        full_name or email.split("@")[0],
         "role":             "neighbor",
         "waiver_accepted":  False,
         "waiver_timestamp": None,
@@ -124,3 +136,29 @@ def get_all_users():
     resp = users_table.scan()
     users = [_to_user(item) for item in resp.get("Items", [])]
     return {"statusCode": 200, "body": users}
+
+# ─── PATCH /users/{id}/role ───────────────────────────────────────────────────
+
+@router.patch("/users/<id>/role")
+def update_role(id: str):
+    """Update a user's role."""
+    body: dict[str, Any] = router.current_event.json_body
+    new_role = body.get("role")
+    if new_role not in ("neighbor", "volunteer", "admin"):
+        return {"statusCode": 400, "body": {"message": "Invalid role"}}
+
+    try:
+        users_table.update_item(
+            Key={"user_id": id},
+            UpdateExpression="SET #r = :role",
+            ConditionExpression="attribute_exists(user_id)",
+            ExpressionAttributeNames={"#r": "role"},
+            ExpressionAttributeValues={":role": new_role},
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return {"statusCode": 404, "body": {"message": "User not found"}}
+        raise
+
+    user = _get_user(id)
+    return {"statusCode": 200, "body": user}

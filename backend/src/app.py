@@ -8,7 +8,7 @@ from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.event_handler import APIGatewayRestResolver
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
-from routers import auth, meetups, rsvps, volunteers
+from routers import auth, meetups, rsvps, volunteers, parks, roles
 
 logger = Logger()
 tracer = Tracer()
@@ -20,6 +20,8 @@ app.include_router(auth.router)
 app.include_router(meetups.router)
 app.include_router(rsvps.router) 
 app.include_router(volunteers.router)
+app.include_router(parks.router)
+app.include_router(roles.router)
 
 
 # ── CORS headers added to every response ─────────────────────────────────────
