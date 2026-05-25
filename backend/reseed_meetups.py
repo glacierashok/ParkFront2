@@ -25,7 +25,6 @@ new_meetups = [
     {
         "meetup_id":      str(uuid.uuid4()),
         "scheduled_time": "2026-04-18T08:00:00-04:00",
-        "location":       "Glazier Ridge Park",
         "status":         "active",
         "weather_note":   "Meet by the main parking lot.",
         "created_at":     now,
@@ -33,7 +32,6 @@ new_meetups = [
     {
         "meetup_id":      str(uuid.uuid4()),
         "scheduled_time": "2026-04-19T08:00:00-04:00",
-        "location":       "Sunday Stride Site",
         "status":         "active",
         "weather_note":   "Second next walk!",
         "created_at":     now,
@@ -43,6 +41,6 @@ new_meetups = [
 print("🗓  Seeding new meetups...")
 for m in new_meetups:
     meetups_table.put_item(Item=m)
-    print(f"✅ Created: {m['location']} @ {m['scheduled_time']}")
+    print(f"✅ Created: {m['meetup_id']} @ {m['scheduled_time']}")
 
 print("\nDone!")

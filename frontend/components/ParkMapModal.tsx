@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fontSizes, fontWeights, radius, spacing } from '../constants/theme';
+import { Meetup, Park } from '../types';
 
 // ─── Glacier Ridge Metro Park – Marsh Hawk Loop ───────────────────────────────
 // Source: AllTrails GPX export (Marsh_Hawk_Loop.gpx) — 454 points downsampled to 77
@@ -96,8 +97,17 @@ const MARSH_HAWK_TRAIL: [number, number][] = [
 ];
 
 // ─── HTML Map Content ─────────────────────────────────────────────────────────
-function buildMapHTML(trail: [number, number][], center: { lat: number; lng: number }): string {
+type MeetupCoord = { lat: number; lng: number; name: string };
+
+function buildMapHTML(
+  trail: [number, number][],
+  center: { lat: number; lng: number },
+  meetupCoords?: MeetupCoord | null,
+  trailName?: string
+): string {
   const trailJSON = JSON.stringify(trail);
+  const meetupJSON = meetupCoords ? JSON.stringify(meetupCoords) : 'null';
+  const displayTrailName = trailName || 'Marsh Hawk Trail';
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -220,7 +230,7 @@ function buildMapHTML(trail: [number, number][], center: { lat: number; lng: num
   <div id="map"></div>
   <div id="gps-banner">📡 Requesting GPS…</div>
   <div id="info-card">
-    <h2>🥾 Marsh Hawk Trail</h2>
+    <h2>🥾 ${displayTrailName}</h2>
     <div class="subtitle">Glacier Ridge Metro Park · Plain City, OH</div>
     <div class="stat-row">
       <div class="stat-pill">📏 ~3.7 miles</div>
@@ -233,11 +243,12 @@ function buildMapHTML(trail: [number, number][], center: { lat: number; lng: num
   <script>
     const TRAIL = ${trailJSON};
     const CENTER = [${center.lat}, ${center.lng}];
+    const MEETUP = ${meetupJSON};
 
     // Init map
     const map = L.map('map', {
-      center: CENTER,
-      zoom: 15,
+      center: MEETUP ? [MEETUP.lat, MEETUP.lng] : CENTER,
+      zoom: MEETUP ? 16 : 15,
       zoomControl: true,
       attributionControl: false,
     });
@@ -277,7 +288,36 @@ function buildMapHTML(trail: [number, number][], center: { lat: number; lng: num
       .addTo(map)
       .bindPopup('<b>🏁 Start / Finish</b><br>Parking lot at Glacier Ridge', { closeButton: false });
 
-    map.fitBounds(trailLine.getBounds(), { padding: [30, 30] });
+    // Meetup marker if specified
+    if (MEETUP) {
+      const meetupIcon = L.divIcon({
+        className: '',
+        html: \`
+          <div style="
+            width: 32px; height: 32px;
+            background: rgba(59, 130, 246, 0.35);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+          ">
+            <div style="
+              width: 14px; height: 14px;
+              background: #3b82f6;
+              border-radius: 50%;
+              border: 2px solid #fff;
+              box-shadow: 0 0 6px rgba(59,130,246,0.8);
+            "></div>
+          </div>
+        \`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+      L.marker([MEETUP.lat, MEETUP.lng], { icon: meetupIcon })
+        .addTo(map)
+        .bindPopup("<b>📍 Meetup Location</b><br>" + MEETUP.name, { closeButton: false })
+        .openPopup();
+    } else {
+      map.fitBounds(trailLine.getBounds(), { padding: [30, 30] });
+    }
 
     // ── GPS Tracking ────────────────────────────────────────────────────────
     let userMarker = null;
@@ -330,11 +370,24 @@ function buildMapHTML(trail: [number, number][], center: { lat: number; lng: num
 interface ParkMapModalProps {
   visible: boolean;
   onClose: () => void;
+  meetup?: Meetup | null;
+  park?: Park | null;
 }
 
-export default function ParkMapModal({ visible, onClose }: ParkMapModalProps) {
+export default function ParkMapModal({ visible, onClose, meetup, park }: ParkMapModalProps) {
   const insets = useSafeAreaInsets();
-  const mapHTML = buildMapHTML(MARSH_HAWK_TRAIL, PARK_CENTER);
+
+  const lat = park?.latitude ?? meetup?.latitude;
+  const lng = park?.longitude ?? meetup?.longitude;
+  const locName = park?.name ?? meetup?.location;
+
+  const meetupCoords = lat && lng ? {
+    lat: lat,
+    lng: lng,
+    name: locName || "Unknown",
+  } : null;
+
+  const mapHTML = buildMapHTML(MARSH_HAWK_TRAIL, PARK_CENTER, meetupCoords, park?.trail);
 
   return (
     <Modal

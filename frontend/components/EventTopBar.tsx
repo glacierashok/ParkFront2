@@ -2,12 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Meetup } from '../types';
+import { Meetup, Park } from '../types';
 import { fontSizes, fontWeights, radius, shadows, spacing } from '../constants/theme';
 import { getWeatherInfo } from '../utils/weather';
 
 interface EventTopBarProps {
   meetup: Meetup | null;
+  park?: Park | null;
   loadingInitial: boolean;
   weather: { temp: number; code: number } | null;
   isClickableHint?: boolean;
@@ -34,7 +35,7 @@ export const getConditionInfo = (weather: { code: number } | null, isCanceled: b
   return { bg: info.bg, icon: info.icon, label: info.condition };
 };
 
-export default function EventTopBar({ meetup, loadingInitial, weather, isClickableHint }: EventTopBarProps) {
+export default function EventTopBar({ meetup, park, loadingInitial, weather, isClickableHint }: EventTopBarProps) {
   const insets = useSafeAreaInsets();
   const isCanceled = meetup?.status === 'canceled';
   const condition = getConditionInfo(weather, isCanceled || false);
@@ -51,7 +52,7 @@ export default function EventTopBar({ meetup, loadingInitial, weather, isClickab
           ) : meetup ? (
             <>
               <Text style={[styles.topBarLocation, isCanceled && styles.strikethrough]} numberOfLines={1}>
-                {meetup.location}
+                {park ? park.name : 'Unknown Park'}
               </Text>
               <Text style={styles.topBarTime}>
                 {formatDate(meetup.scheduled_time)}

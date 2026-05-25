@@ -14,6 +14,8 @@ Globals:
         MEETUPS_TABLE:  !Ref MeetupsTable
         RSVPS_TABLE:    !Ref RSVPsTable
         VLOGS_TABLE:    !Ref VolunteerLogsTable
+        PARKS_TABLE:    !Ref ParksTable
+        ROLES_TABLE:    !Ref RolesTable
         POWERTOOLS_SERVICE_NAME: neighborhood-stride
         LOG_LEVEL: INFO
   Api:
@@ -109,6 +111,32 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  # ─── Parks Table ─────────────────────────────────────────────────────────────
+  ParksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Parks
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: park_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: park_id
+          KeyType: HASH
+
+  # ─── Roles Table ─────────────────────────────────────────────────────────────
+  RolesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Roles
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: role_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: role_id
+          KeyType: HASH
+
   # ─── Single Lambda Function (Monolithic Router) ───────────────────────────────
   NeighborhoodStrideFunction:
     Type: AWS::Serverless::Function
@@ -124,6 +152,10 @@ Resources:
             TableName: !Ref RSVPsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref VolunteerLogsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ParksTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RolesTable
       Events:
         # ── Auth & Users
         Login:
@@ -141,6 +173,11 @@ Resources:
           Properties:
             Path: /users
             Method: GET
+        UpdateUserRole:
+          Type: Api
+          Properties:
+            Path: /users/{id}/role
+            Method: PATCH
 
         # ── Meetups (upcoming MUST be before {id})
         GetUpcomingMeetup:
@@ -213,6 +250,40 @@ Resources:
             Path: /volunteer-logs/{id}
             Method: DELETE
 
+        # ── Parks
+        GetAllParks:
+          Type: Api
+          Properties:
+            Path: /parks
+            Method: GET
+        CreatePark:
+          Type: Api
+          Properties:
+            Path: /parks
+            Method: POST
+        DeletePark:
+          Type: Api
+          Properties:
+            Path: /parks/{id}
+            Method: DELETE
+
+        # ── Roles
+        GetAllRoles:
+          Type: Api
+          Properties:
+            Path: /roles
+            Method: GET
+        CreateRole:
+          Type: Api
+          Properties:
+            Path: /roles
+            Method: POST
+        DeleteRole:
+          Type: Api
+          Properties:
+            Path: /roles/{id}
+            Method: DELETE
+
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
@@ -229,3 +300,9 @@ Outputs:
   VolunteerLogsTableName:
     Description: "VolunteerLogs DynamoDB table"
     Value: !Ref VolunteerLogsTable
+  ParksTableName:
+    Description: "Parks DynamoDB table"
+    Value: !Ref ParksTable
+  RolesTableName:
+    Description: "Roles DynamoDB table"
+    Value: !Ref RolesTable

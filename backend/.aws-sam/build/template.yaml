@@ -17,6 +17,10 @@ Globals:
           Ref: RSVPsTable
         VLOGS_TABLE:
           Ref: VolunteerLogsTable
+        PARKS_TABLE:
+          Ref: ParksTable
+        ROLES_TABLE:
+          Ref: RolesTable
         POWERTOOLS_SERVICE_NAME: neighborhood-stride
         LOG_LEVEL: INFO
   Api:
@@ -99,6 +103,28 @@ Resources:
           KeyType: HASH
         Projection:
           ProjectionType: ALL
+  ParksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Parks
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: park_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: park_id
+        KeyType: HASH
+  RolesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Roles
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: role_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: role_id
+        KeyType: HASH
   NeighborhoodStrideFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -117,6 +143,12 @@ Resources:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: VolunteerLogsTable
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: ParksTable
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: RolesTable
       Events:
         Login:
           Type: Api
@@ -133,6 +165,11 @@ Resources:
           Properties:
             Path: /users
             Method: GET
+        UpdateUserRole:
+          Type: Api
+          Properties:
+            Path: /users/{id}/role
+            Method: PATCH
         GetUpcomingMeetup:
           Type: Api
           Properties:
@@ -198,6 +235,36 @@ Resources:
           Properties:
             Path: /volunteer-logs/{id}
             Method: DELETE
+        GetAllParks:
+          Type: Api
+          Properties:
+            Path: /parks
+            Method: GET
+        CreatePark:
+          Type: Api
+          Properties:
+            Path: /parks
+            Method: POST
+        DeletePark:
+          Type: Api
+          Properties:
+            Path: /parks/{id}
+            Method: DELETE
+        GetAllRoles:
+          Type: Api
+          Properties:
+            Path: /roles
+            Method: GET
+        CreateRole:
+          Type: Api
+          Properties:
+            Path: /roles
+            Method: POST
+        DeleteRole:
+          Type: Api
+          Properties:
+            Path: /roles/{id}
+            Method: DELETE
     Metadata:
       SamResourceId: NeighborhoodStrideFunction
 Outputs:
@@ -221,3 +288,11 @@ Outputs:
     Description: VolunteerLogs DynamoDB table
     Value:
       Ref: VolunteerLogsTable
+  ParksTableName:
+    Description: Parks DynamoDB table
+    Value:
+      Ref: ParksTable
+  RolesTableName:
+    Description: Roles DynamoDB table
+    Value:
+      Ref: RolesTable

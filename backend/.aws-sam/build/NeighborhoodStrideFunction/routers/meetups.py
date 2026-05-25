@@ -11,6 +11,7 @@ Table: Meetups
 """
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.event_handler.router import APIGatewayRouter
@@ -25,13 +26,19 @@ router = APIGatewayRouter()
 # ─── Helper: DynamoDB item → Meetup dict ─────────────────────────────────────
 
 def _to_meetup(item: dict) -> dict:
-    return {
+    res = {
         "id":             item["meetup_id"],
         "scheduled_time": item["scheduled_time"],
-        "location":       item["location"],
         "status":         item["status"],
         "weather_note":   item.get("weather_note", ""),
     }
+    if "park_id" in item:
+        res["park_id"] = item["park_id"]
+    if "latitude" in item and item["latitude"] is not None:
+        res["latitude"] = float(item["latitude"])
+    if "longitude" in item and item["longitude"] is not None:
+        res["longitude"] = float(item["longitude"])
+    return res
 
 
 # ─── GET /meetups/upcoming ────────────────────────────────────────────────────
@@ -85,20 +92,33 @@ def get_all_meetups():
 @router.post("/meetups")
 def create_meetup():
     body = router.current_event.json_body
-    required = ("scheduled_time", "location")
+    required = ("scheduled_time",)
     if not all(body.get(k) for k in required):
-        return {"statusCode": 400, "body": {"message": "scheduled_time and location are required"}}
+        return {"statusCode": 400, "body": {"message": "scheduled_time is required"}}
 
     meetup_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     item = {
         "meetup_id":      meetup_id,
         "scheduled_time": body["scheduled_time"],
-        "location":       body["location"],
         "status":         body.get("status", "active"),
         "weather_note":   body.get("weather_note", ""),
         "created_at":     now,
     }
+    
+    if "park_id" in body:
+        item["park_id"] = str(body["park_id"])
+    if "latitude" in body and body["latitude"] is not None:
+        try:
+            item["latitude"] = Decimal(str(body["latitude"]))
+        except Exception:
+            pass
+    if "longitude" in body and body["longitude"] is not None:
+        try:
+            item["longitude"] = Decimal(str(body["longitude"]))
+        except Exception:
+            pass
+
     meetups_table.put_item(Item=item)
     return {"statusCode": 201, "body": _to_meetup(item)}
 

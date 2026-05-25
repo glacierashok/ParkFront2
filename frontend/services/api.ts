@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { Meetup, RSVP, User, VolunteerLog } from '../types';
+import { Meetup, RSVP, User, VolunteerLog, Park, VolunteerRole } from '../types';
 
 let currentUserId: string | null = null;
 
@@ -7,8 +7,8 @@ export const setCurrentUserId = (id: string | null) => {
   currentUserId = id;
 };
 
-//const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://1÷27.0.0.1:3000';
-const API_BASE_URL = 'https://94hmuk0lx1.execute-api.us-east-2.amazonaws.com/Prod';
+const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://127.0.0.1:3000';
+// const API_BASE_URL = 'https://94hmuk0lx1.execute-api.us-east-2.amazonaws.com/Prod';
 
 const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const headers = new Headers(options.headers);
@@ -53,6 +53,51 @@ export const updateWaiverStatus = async (userId: string): Promise<User> => {
 
 export const getAllUsers = async (): Promise<User[]> => {
   return await fetchApi<User[]>('/users');
+};
+
+export const updateUserRole = async (userId: string, role: string): Promise<User> => {
+  return await fetchApi<User>(`/users/${userId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role })
+  });
+};
+
+// ─── Parks ───────────────────────────────────────────────────────────────────
+
+export const getAllParks = async (): Promise<Park[]> => {
+  return await fetchApi<Park[]>('/parks');
+};
+
+export const createPark = async (data: Omit<Park, 'id'> & { id: string }): Promise<Park> => {
+  return await fetchApi<Park>('/parks', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+};
+
+export const deletePark = async (parkId: string): Promise<void> => {
+  return await fetchApi<void>(`/parks/${parkId}`, {
+    method: 'DELETE'
+  });
+};
+
+// ─── Roles ───────────────────────────────────────────────────────────────────
+
+export const getAllRoles = async (): Promise<VolunteerRole[]> => {
+  return await fetchApi<VolunteerRole[]>('/roles');
+};
+
+export const createRole = async (name: string): Promise<VolunteerRole> => {
+  return await fetchApi<VolunteerRole>('/roles', {
+    method: 'POST',
+    body: JSON.stringify({ name })
+  });
+};
+
+export const deleteRole = async (roleId: string): Promise<void> => {
+  return await fetchApi<void>(`/roles/${roleId}`, {
+    method: 'DELETE'
+  });
 };
 
 // ─── Meetups ─────────────────────────────────────────────────────────────────

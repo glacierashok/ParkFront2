@@ -38,6 +38,8 @@ if os.environ.get("AWS_SAM_LOCAL"):
     os.environ["MEETUPS_TABLE"] = "Meetups"
     os.environ["RSVPS_TABLE"]   = "RSVPs"
     os.environ["VLOGS_TABLE"]   = "VolunteerLogs"
+    os.environ["PARKS_TABLE"]   = "Parks"
+    os.environ["ROLES_TABLE"]   = "Roles"
 
 else:
     _dynamodb = boto3.resource("dynamodb")
@@ -46,3 +48,5 @@ users_table    = _dynamodb.Table(os.environ.get("USERS_TABLE",    "Users"))
 meetups_table  = _dynamodb.Table(os.environ.get("MEETUPS_TABLE",  "Meetups"))
 rsvps_table    = _dynamodb.Table(os.environ.get("RSVPS_TABLE",    "RSVPs"))
 vlogs_table    = _dynamodb.Table(os.environ.get("VLOGS_TABLE",    "VolunteerLogs"))
+parks_table    = _dynamodb.Table(os.environ.get("PARKS_TABLE",    "Parks"))
+roles_table    = _dynamodb.Table(os.environ.get("ROLES_TABLE",    "Roles"))

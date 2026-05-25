@@ -136,3 +136,29 @@ def get_all_users():
     resp = users_table.scan()
     users = [_to_user(item) for item in resp.get("Items", [])]
     return {"statusCode": 200, "body": users}
+
+# ─── PATCH /users/{id}/role ───────────────────────────────────────────────────
+
+@router.patch("/users/<id>/role")
+def update_role(id: str):
+    """Update a user's role."""
+    body: dict[str, Any] = router.current_event.json_body
+    new_role = body.get("role")
+    if new_role not in ("neighbor", "volunteer", "admin"):
+        return {"statusCode": 400, "body": {"message": "Invalid role"}}
+
+    try:
+        users_table.update_item(
+            Key={"user_id": id},
+            UpdateExpression="SET #r = :role",
+            ConditionExpression="attribute_exists(user_id)",
+            ExpressionAttributeNames={"#r": "role"},
+            ExpressionAttributeValues={":role": new_role},
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return {"statusCode": 404, "body": {"message": "User not found"}}
+        raise
+
+    user = _get_user(id)
+    return {"statusCode": 200, "body": user}

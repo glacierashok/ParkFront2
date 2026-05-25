@@ -70,9 +70,11 @@ export default function IndexScreen() {
 
   useEffect(() => {
     const now = new Date().toISOString();
+    const nowMs = Date.now();
+    const twoHours = 2 * 60 * 60 * 1000;
     api.getAllMeetups().then((all) => {
       const future = all
-        .filter((m) => m.status === 'active' && m.scheduled_time > now)
+        .filter((m) => m.status === 'active' && (new Date(m.scheduled_time).getTime() + twoHours) > nowMs)
         .sort((a, b) => a.scheduled_time.localeCompare(b.scheduled_time));
       const upcoming = future[0] ?? null;
       const second = future[1] ?? null;
