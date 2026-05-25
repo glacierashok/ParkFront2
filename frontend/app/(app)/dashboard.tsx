@@ -208,9 +208,14 @@ export default function DashboardScreen() {
 
   const isCanceled = meetup?.status === 'canceled';
 
+  // Keep the top bar in loading state until we have the park data for the current meetup.
+  // This prevents a flash of "Unknown Park" while the parks map is being populated.
+  const currentPark = meetup?.park_id ? parks[meetup.park_id] : null;
+  const topBarLoading = loadingInitial || (!!meetup?.park_id && !currentPark);
+
   return (
     <AppBackground weather={weather}>
-      <EventTopBar meetup={meetup} park={meetup?.park_id ? parks[meetup.park_id] : null} loadingInitial={loadingInitial} weather={weather} />
+      <EventTopBar meetup={meetup} park={currentPark} loadingInitial={topBarLoading} weather={weather} />
 
       <View style={{ flex: 1, overflow: 'hidden' }}>
         <ScrollView
@@ -232,19 +237,23 @@ export default function DashboardScreen() {
               </View>
             </View>
             <View style={styles.greetingActions}>
-              <Pressable
-                style={styles.mapBtn}
-                onPress={() => setMapVisible(true)}
-                accessibilityLabel="View park trail map"
-                accessibilityRole="button"
-              >
-                <Ionicons name="map-outline" size={22} color={colors.primary} />
-              </Pressable>
               <Pressable style={styles.logoutBtn} onPress={handleLogout}>
                 <Ionicons name="log-out-outline" size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
           </View>
+
+          {/* ── Map Trail Button ─────────────────────────────────────────── */}
+          <Pressable
+            style={({ pressed }) => [styles.mapTrailBtn, pressed && { opacity: 0.75 }]}
+            onPress={() => setMapVisible(true)}
+            accessibilityLabel="View park trail map"
+            accessibilityRole="button"
+          >
+            <Ionicons name="map-outline" size={18} color="#fff" />
+            <Text style={styles.mapTrailBtnText}>View Park Trail Map</Text>
+            <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.6)" />
+          </Pressable>
 
           {/* ── Stats row ────────────────────────────────────────────── */}
           <Text style={styles.sectionTitle}>Your Activity</Text>
@@ -474,7 +483,7 @@ const styles = StyleSheet.create({
   scroll: { paddingTop: spacing.xl, paddingHorizontal: spacing.md },
 
   // Greeting Section
-  greetingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl, paddingHorizontal: spacing.xs },
+  greetingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, paddingHorizontal: spacing.xs },
   greetingLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   greetingActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   avatarPlaceholder: {
@@ -490,15 +499,30 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     backgroundColor: colors.surface,
     borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
     ...shadows.sm
   },
-  mapBtn: {
-    padding: spacing.sm,
-    backgroundColor: colors.primaryLight,
-    borderRadius: radius.full,
+
+  mapTrailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xl,
+    marginHorizontal: spacing.xs,
+    backgroundColor: 'rgba(59, 130, 246, 0.25)',
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.4)',
-    ...shadows.sm
+    borderColor: 'rgba(59, 130, 246, 0.45)',
+    borderRadius: radius.full,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  mapTrailBtnText: {
+    flex: 1,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: '#fff',
   },
 
   sectionTitle: { fontSize: fontSizes.lg, fontWeight: fontWeights.bold, color: '#fff', marginBottom: spacing.md, paddingHorizontal: spacing.xs },

@@ -32,6 +32,7 @@ export interface RSVP {
   id: string;
   meetup_id: string;
   user_id: string;
+  user_full_name?: string;
   intent: 'going' | 'not_going';
   attended: boolean;
 }

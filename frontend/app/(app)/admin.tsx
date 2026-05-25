@@ -17,7 +17,8 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as api from '../../services/api';
-import { Meetup, User, VolunteerLog } from '../../types';
+import { Meetup, User, VolunteerLog, Park } from '../../types';
+import AttendeeListModal from '../../components/AttendeeListModal';
 import { colors, fontSizes, fontWeights, radius, shadows, spacing } from '../../constants/theme';
 
 type AdminTab = 'overview' | 'parks' | 'events' | 'roles' | 'hours';
@@ -177,7 +178,7 @@ function OverviewTab() {
 
 // ─── Manage Parks ─────────────────────────────────────────────────────────────
 function ParksTab() {
-  const [parks, setParks] = useState<import('../../types').Park[]>([]);
+  const [parks, setParks] = useState<Park[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -376,6 +377,7 @@ function EventsTab() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ park_id: '', scheduled_time: new Date(), weather_note: '' });
   const [creating, setCreating] = useState(false);
+  const [attendeesModalMeetup, setAttendeesModalMeetup] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -468,9 +470,26 @@ function EventsTab() {
               {new Date(m.scheduled_time).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </Text>
             {m.weather_note ? <Text style={styles.eventWeather}>{m.weather_note}</Text> : null}
+            
+            <View style={{ marginTop: spacing.md, flexDirection: 'row' }}>
+              <Pressable
+                style={[styles.badge, styles.badgeVol, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                onPress={() => setAttendeesModalMeetup(m.id)}
+              >
+                <Ionicons name="people-outline" size={14} color={colors.primary} />
+                <Text style={styles.badgeText}>View Attendees</Text>
+              </Pressable>
+            </View>
           </View>
         ))}
       </ScrollView>
+
+      {/* Attendee Modal */}
+      <AttendeeListModal 
+        visible={!!attendeesModalMeetup} 
+        onClose={() => setAttendeesModalMeetup(null)} 
+        meetupId={attendeesModalMeetup || undefined} 
+      />
 
       {/* Create Modal */}
       <Modal transparent visible={showCreate} animationType="slide">
