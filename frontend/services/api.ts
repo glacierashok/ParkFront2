@@ -7,8 +7,8 @@ export const setCurrentUserId = (id: string | null) => {
   currentUserId = id;
 };
 
-// const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://127.0.0.1:3000';
-const API_BASE_URL = 'https://94hmuk0lx1.execute-api.us-east-2.amazonaws.com/Prod';
+const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://127.0.0.1:3000';
+// const API_BASE_URL = 'https://94hmuk0lx1.execute-api.us-east-2.amazonaws.com/Prod';
 
 const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const headers = new Headers(options.headers);

@@ -18,7 +18,7 @@ from aws_lambda_powertools.event_handler.router import APIGatewayRouter
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
-from db.client import rsvps_table
+from db.client import rsvps_table, users_table
 
 logger = Logger()
 router = APIGatewayRouter()
@@ -40,11 +40,26 @@ def _to_rsvp(item: dict) -> dict:
 
 @router.get("/meetups/<id>/rsvps")
 def get_rsvps_for_meetup(id: str):
-    """Returns all RSVPs for a given meetup."""
+    """Returns all RSVPs for a given meetup, including user full names."""
     resp = rsvps_table.query(
         KeyConditionExpression=Key("meetup_id").eq(id)
     )
     rsvps = [_to_rsvp(item) for item in resp.get("Items", [])]
+
+    # Enrich with user_full_name
+    user_cache = {}
+    for r in rsvps:
+        uid = r["user_id"]
+        if uid not in user_cache:
+            try:
+                u_resp = users_table.get_item(Key={"user_id": uid})
+                u_item = u_resp.get("Item")
+                user_cache[uid] = u_item.get("full_name", "Unknown User") if u_item else "Unknown User"
+            except Exception as e:
+                logger.warning(f"Failed to fetch user {uid}: {e}")
+                user_cache[uid] = "Unknown User"
+        r["user_full_name"] = user_cache[uid]
+
     return {"statusCode": 200, "body": rsvps}
 
 
