@@ -44,6 +44,8 @@ export default function IndexScreen() {
     default: !!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
 
+  const [parks, setParks] = useState<Record<string, import('../types').Park>>({});
+
   // Sliding Animation State
   const [activeView, setActiveView] = useState<'top' | 'bottom'>('top');
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -72,8 +74,16 @@ export default function IndexScreen() {
     const now = new Date().toISOString();
     const nowMs = Date.now();
     const twoHours = 2 * 60 * 60 * 1000;
-    api.getAllMeetups().then((all) => {
-      const future = all
+    
+    Promise.all([
+      api.getAllMeetups(),
+      api.getAllParks(),
+    ]).then(([allMeetups, allParks]) => {
+      const parksMap: Record<string, import('../types').Park> = {};
+      allParks.forEach(p => { parksMap[p.id] = p; });
+      setParks(parksMap);
+
+      const future = allMeetups
         .filter((m) => m.status === 'active' && (new Date(m.scheduled_time).getTime() + twoHours) > nowMs)
         .sort((a, b) => a.scheduled_time.localeCompare(b.scheduled_time));
       const upcoming = future[0] ?? null;
@@ -83,8 +93,8 @@ export default function IndexScreen() {
       if (upcoming) api.getWeatherByTime(upcoming.scheduled_time).then(setEventWeather);
       setLoadingInitial(false);
     });
-    api.getWeatherByTime(now).then(setCurrentWeather);
     
+    api.getWeatherByTime(now).then(setCurrentWeather);
     AppleAuthentication.isAvailableAsync().then(setAppleAuthAvailable);
   }, []);
 
@@ -110,10 +120,13 @@ export default function IndexScreen() {
     }
   };
 
+  const currentPark = meetup?.park_id ? parks[meetup.park_id] : null;
+  const topBarLoading = loadingInitial || (!!meetup?.park_id && !currentPark);
+
   return (
     <AppBackground weather={eventWeather}>
       <Pressable onPress={() => setActiveView('top')} style={{ zIndex: 10 }}>
-        <EventTopBar meetup={meetup} loadingInitial={loadingInitial} weather={eventWeather} isClickableHint={activeView === 'bottom'} />
+        <EventTopBar meetup={meetup} park={currentPark} loadingInitial={topBarLoading} weather={eventWeather} isClickableHint={activeView === 'bottom'} />
       </Pressable>
 
       <View style={{ flex: 1, overflow: 'hidden' }}>
