@@ -235,7 +235,7 @@ function AttendeesTab({ meetupId: defaultMeetupId }: { meetupId?: string }) {
         {meetups.map(m => {
           const park = parks.find(p => p.id === m.park_id);
           const isSelected = m.id === selectedMeetupId;
-          const dateStr = new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          const dateStr = new Date(m.scheduled_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
           return (
             <Pressable
               key={m.id}
