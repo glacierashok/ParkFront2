@@ -383,6 +383,44 @@ export default function DashboardScreen() {
             </View>
           )}
 
+          {/* ── General Agenda ──────────────────────────────────── */}
+          {meetup && !isCanceled && (
+            <View style={{ marginTop: spacing.lg }}>
+              <Text style={styles.sectionTitle}>Agenda</Text>
+              <View style={styles.agendaCard}>
+                <View style={styles.agendaItem}>
+                  <View style={styles.agendaIconWrap}>
+                    <Ionicons name="body-outline" size={18} color={colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.agendaTime}>First 5 mins</Text>
+                    <Text style={styles.agendaText}>Warm up</Text>
+                  </View>
+                </View>
+                <View style={styles.agendaLine} />
+                <View style={styles.agendaItem}>
+                  <View style={styles.agendaIconWrap}>
+                    <Ionicons name="walk-outline" size={18} color={colors.success} />
+                  </View>
+                  <View>
+                    <Text style={styles.agendaTime}>Main Event</Text>
+                    <Text style={styles.agendaText}>Walk or jog</Text>
+                  </View>
+                </View>
+                <View style={styles.agendaLine} />
+                <View style={styles.agendaItem}>
+                  <View style={styles.agendaIconWrap}>
+                    <Ionicons name="water-outline" size={18} color={colors.secondary} />
+                  </View>
+                  <View>
+                    <Text style={styles.agendaTime}>Last 5 mins</Text>
+                    <Text style={styles.agendaText}>Cool down</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* ── Also Coming Up ──────────────────────────────────── */}
           {futureMeetups.length > 0 && (
             <View style={styles.nextNextSection}>
@@ -606,4 +644,32 @@ const styles = StyleSheet.create({
   rsvpBtnActiveNotGoing: { backgroundColor: colors.alert },
   rsvpBtnTextLarge: { fontSize: fontSizes.md, fontWeight: fontWeights.bold },
   btnDisabled: { opacity: 0.5 },
+
+  // Agenda
+  agendaCard: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radius.xl,
+    ...shadows.sm,
+  },
+  agendaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  agendaIconWrap: {
+    width: 36, height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  agendaTime: { fontSize: fontSizes.xs, color: colors.textSecondary, fontWeight: fontWeights.bold, textTransform: 'uppercase' },
+  agendaText: { fontSize: fontSizes.md, color: colors.text, fontWeight: fontWeights.medium, marginTop: 2 },
+  agendaLine: {
+    width: 2,
+    height: 20,
+    backgroundColor: colors.border,
+    marginLeft: 17,
+    marginVertical: spacing.xs,
+  },
 });
