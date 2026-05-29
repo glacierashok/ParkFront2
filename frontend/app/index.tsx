@@ -97,8 +97,7 @@ export default function IndexScreen() {
     api.getWeatherByTime(now).then(setCurrentWeather);
     
     if (Platform.OS === 'web') {
-      const isAppleDevice = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
-      setAppleAuthAvailable(isAppleDevice);
+      setAppleAuthAvailable(true);
     } else {
       AppleAuthentication.isAvailableAsync().then(setAppleAuthAvailable);
     }
@@ -194,23 +193,6 @@ export default function IndexScreen() {
 
         {/* ── OAuth Buttons ────────────────────────────────────────────── */}
         <View style={[styles.section]} >
-          {googleAuthAvailable && (
-            <Pressable
-              style={[styles.oauthBtn, styles.googleBtn, isLoading && styles.btnDisabled]}
-              onPress={() => handleLogin('google')}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <Ionicons name="logo-google" size={20} color="#fff" />
-                  <Text style={styles.oauthBtnText}>Sign in with Google</Text>
-                </>
-              )}
-            </Pressable>
-          )}
-
           {appleAuthAvailable && (
             <Pressable
               style={[styles.oauthBtn, styles.appleBtn, isLoading && styles.btnDisabled]}
@@ -223,6 +205,23 @@ export default function IndexScreen() {
                 <>
                   <Ionicons name="logo-apple" size={22} color="#fff" />
                   <Text style={styles.oauthBtnText}>Sign in with Apple</Text>
+                </>
+              )}
+            </Pressable>
+          )}
+
+          {googleAuthAvailable && (
+            <Pressable
+              style={[styles.oauthBtn, styles.googleBtn, isLoading && styles.btnDisabled]}
+              onPress={() => handleLogin('google')}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={20} color="#fff" />
+                  <Text style={styles.oauthBtnText}>Sign in with Google</Text>
                 </>
               )}
             </Pressable>
@@ -397,7 +396,7 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   googleBtn: { backgroundColor: 'rgba(59, 130, 246, 0.4)' },
-  appleBtn: { backgroundColor: 'rgba(0, 0, 0, 0.4)' },
+  appleBtn: { backgroundColor: '#000000' },
   oauthBtnText: { fontSize: fontSizes.md, color: '#fff', fontWeight: fontWeights.semibold },
   btnDisabled: { opacity: 0.6 },
   disclaimer: {
