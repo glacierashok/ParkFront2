@@ -35,11 +35,12 @@ const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): Promise
 export const loginUser = async (
   provider: 'apple' | 'google',
   email: string = `${provider}user@example.com`,
-  name?: string
+  name?: string,
+  firebaseUid?: string
 ): Promise<User> => {
   const u = await fetchApi<User>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ provider, email, name })
+    body: JSON.stringify({ provider, email, name, firebaseUid })
   });
   currentUserId = u.id;
   return u;
