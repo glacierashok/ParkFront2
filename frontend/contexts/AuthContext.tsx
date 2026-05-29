@@ -96,32 +96,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else if (provider === 'apple') {
           try {
-            if (Platform.OS === 'web') {
-              // Apple Sign In on Web requires configuring a Service ID, validating domains, and setting up redirect URIs.
-              // For now, we bypass the native call on web to prevent it from crashing and use a mock identity.
-              console.log('Web environment detected: bypassing native Apple login and using mock identity.');
-              email = 'appleuser@example.com';
-              name = 'Apple Web User';
-            } else {
-              const credential = await AppleAuthentication.signInAsync({
-                requestedScopes: [
-                  AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-                  AppleAuthentication.AppleAuthenticationScope.EMAIL,
-                ],
-              });
-              // Apple only provides email and full name on the first login of an app.
-              if (credential.email) {
-                email = credential.email;
-              }
-              if (credential.fullName) {
-                name = [credential.fullName.givenName, credential.fullName.familyName].filter(Boolean).join(' ');
-              }
-              
-              if (!email) {
-                // We could prompt them, or let the backend assign a placeholder/lookup based on user id.
-                // For now, we fallback to a default or undefined which API supports.
-                console.log('Apple identity token received, but email not present (user likely already logged in before).');
-              }
+            const credential = await AppleAuthentication.signInAsync({
+              requestedScopes: [
+                AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                AppleAuthentication.AppleAuthenticationScope.EMAIL,
+              ],
+            });
+            // Apple only provides email and full name on the first login of an app.
+            if (credential.email) {
+              email = credential.email;
+            }
+            if (credential.fullName) {
+              name = [credential.fullName.givenName, credential.fullName.familyName].filter(Boolean).join(' ');
+            }
+            
+            if (!email) {
+              // We could prompt them, or let the backend assign a placeholder/lookup based on user id.
+              // For now, we fallback to a default or undefined which API supports.
+              console.log('Apple identity token received, but email not present (user likely already logged in before).');
             }
             // in a serious app, you send credential.identityToken to backend to verify and extract the email/sub 
           } catch (e: any) {
