@@ -3,9 +3,10 @@ import { Platform } from 'react-native';
 import { User } from '../types';
 import * as api from '../services/api';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth } from '../firebaseConfig';
+import { signInWithPopup, OAuthProvider, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 
 const AUTH_STORAGE_KEY = '@parkwalkjog_user';
 
@@ -56,92 +57,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  });
+  const login = useCallback(async (provider: 'apple' | 'google') => {
+    setIsLoading(true);
+    try {
+      let email: string | undefined = undefined;
+      let name: string | undefined = undefined;
+      let firebaseUid: string | undefined = undefined;
 
-  const login = useCallback(
-    async (provider: 'apple' | 'google') => {
-      setIsLoading(true);
-      try {
-        let email: string | undefined = undefined;
-        let name: string | undefined = undefined;
-
-        if (provider === 'google') {
-          const result = await promptAsync();
-          
-          if (result?.type === 'success') {
-            const token = result.authentication?.accessToken;
-            if (token) {
-              const userInfoResponse = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              const authUser = await userInfoResponse.json();
-              if (authUser?.email) {
-                email = authUser.email;
-              }
-              if (authUser?.name) {
-                name = authUser.name;
-              } else if (authUser?.given_name) {
-                name = [authUser.given_name, authUser.family_name].filter(Boolean).join(' ');
-              }
-            } else {
-              throw new Error('Google Sign-In failed to return an access token.');
-            }
-          } else {
-            console.log('Login cancelled or failed', result);
-            throw new Error('Login cancelled or failed');
-          }
-        } else if (provider === 'apple') {
-          try {
-            const credential = await AppleAuthentication.signInAsync({
-              requestedScopes: [
-                AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-                AppleAuthentication.AppleAuthenticationScope.EMAIL,
-              ],
-            });
-            // Apple only provides email and full name on the first login of an app.
-            if (credential.email) {
-              email = credential.email;
-            }
-            if (credential.fullName) {
-              name = [credential.fullName.givenName, credential.fullName.familyName].filter(Boolean).join(' ');
-            }
-            
-            if (!email) {
-              // We could prompt them, or let the backend assign a placeholder/lookup based on user id.
-              // For now, we fallback to a default or undefined which API supports.
-              console.log('Apple identity token received, but email not present (user likely already logged in before).');
-            }
-            // in a serious app, you send credential.identityToken to backend to verify and extract the email/sub 
-          } catch (e: any) {
-            if (e.code === 'ERR_REQUEST_CANCELED') {
-              console.log('Apple Login cancelled');
-              throw new Error('Login cancelled');
-            } else {
-              console.error('Apple Login error', e);
-              throw e;
-            }
-          }
+      if (provider === 'google') {
+        if (Platform.OS === 'web') {
+          const googleProvider = new GoogleAuthProvider();
+          const result = await signInWithPopup(auth, googleProvider);
+          email = result.user.email || undefined;
+          name = result.user.displayName || undefined;
+          firebaseUid = result.user.uid;
+        } else {
+          // Native Google Sign-In with Firebase would go here (using react-native-google-signin)
+          // For now, this is a placeholder for native
+          throw new Error('Native Google Login not yet configured with Firebase.');
         }
+      } else if (provider === 'apple') {
+        if (Platform.OS === 'web') {
+          const appleProvider = new OAuthProvider('apple.com');
+          appleProvider.addScope('email');
+          appleProvider.addScope('name');
+          const result = await signInWithPopup(auth, appleProvider);
+          email = result.user.email || undefined;
+          name = result.user.displayName || undefined;
+          firebaseUid = result.user.uid;
+        } else {
+          const credential = await AppleAuthentication.signInAsync({
+            requestedScopes: [
+              AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+              AppleAuthentication.AppleAuthenticationScope.EMAIL,
+            ],
+          });
+          
+          if (credential.email) email = credential.email;
+          if (credential.fullName) name = [credential.fullName.givenName, credential.fullName.familyName].filter(Boolean).join(' ');
 
-        // Pass it to the naive backend
-        const loggedIn = await api.loginUser(provider, email, name);
-        await saveUser(loggedIn);
-        return loggedIn;
-      } catch (error: any) {
-        console.error('An error occurred during login', error);
-        throw error;
-      } finally {
-        setIsLoading(false);
+          const appleProvider = new OAuthProvider('apple.com');
+          const firebaseCredential = appleProvider.credential({
+            idToken: credential.identityToken!,
+          });
+
+          const result = await signInWithCredential(auth, firebaseCredential);
+          firebaseUid = result.user.uid;
+          
+          // If native Apple payload didn't give us the name/email (subsequent logins), Firebase might have it
+          if (!email && result.user.email) email = result.user.email;
+          if (!name && result.user.displayName) name = result.user.displayName;
+        }
       }
-    },
-    [promptAsync]
-  );
 
-  const logout = useCallback(() => saveUser(null), []);
+      // We now pass the firebaseUid to the backend API to act as the primary key
+      const loggedIn = await api.loginUser(provider, email, name, firebaseUid);
+      await saveUser(loggedIn);
+      return loggedIn;
+    } catch (error: any) {
+      console.error('An error occurred during login', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    auth.signOut().catch(console.error);
+    saveUser(null);
+  }, []);
 
   const refreshUser = useCallback((updated: User) => saveUser(updated), []);
 
