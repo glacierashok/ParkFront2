@@ -95,7 +95,13 @@ export default function IndexScreen() {
     });
     
     api.getWeatherByTime(now).then(setCurrentWeather);
-    AppleAuthentication.isAvailableAsync().then(setAppleAuthAvailable);
+    
+    if (Platform.OS === 'web') {
+      const isAppleDevice = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+      setAppleAuthAvailable(isAppleDevice);
+    } else {
+      AppleAuthentication.isAvailableAsync().then(setAppleAuthAvailable);
+    }
   }, []);
 
   // Redirect if already logged in
