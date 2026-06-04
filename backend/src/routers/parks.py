@@ -112,3 +112,64 @@ def delete_park(id: str):
         return {"statusCode": 500, "body": {"message": "Error deleting park"}}
         
     return {"statusCode": 200, "body": {"message": "Park deleted successfully"}}
+
+# ─── PUT /parks/{id} ──────────────────────────────────────────────────────────
+
+@router.put("/parks/<id>")
+def update_park(id: str):
+    body = router.current_event.json_body
+    
+    update_expr = []
+    expr_attr_names = {}
+    expr_attr_values = {}
+    
+    if "name" in body:
+        update_expr.append("#n = :n")
+        expr_attr_names["#n"] = "name"
+        expr_attr_values[":n"] = body["name"]
+    
+    if "location" in body:
+        update_expr.append("#loc = :loc")
+        expr_attr_names["#loc"] = "location"
+        expr_attr_values[":loc"] = body["location"]
+        
+    if "trail" in body:
+        update_expr.append("#t = :t")
+        expr_attr_names["#t"] = "trail"
+        expr_attr_values[":t"] = body["trail"]
+        
+    if "latitude" in body and body["latitude"] is not None:
+        update_expr.append("#lat = :lat")
+        expr_attr_names["#lat"] = "latitude"
+        try:
+            expr_attr_values[":lat"] = Decimal(str(body["latitude"]))
+        except Exception:
+            pass
+            
+    if "longitude" in body and body["longitude"] is not None:
+        update_expr.append("#lon = :lon")
+        expr_attr_names["#lon"] = "longitude"
+        try:
+            expr_attr_values[":lon"] = Decimal(str(body["longitude"]))
+        except Exception:
+            pass
+
+    if not update_expr:
+        return {"statusCode": 400, "body": {"message": "No fields to update"}}
+
+    try:
+        resp = parks_table.update_item(
+            Key={"park_id": id},
+            UpdateExpression="SET " + ", ".join(update_expr),
+            ExpressionAttributeNames=expr_attr_names,
+            ExpressionAttributeValues=expr_attr_values,
+            ConditionExpression="attribute_exists(park_id)",
+            ReturnValues="ALL_NEW"
+        )
+    except Exception as e:
+        if getattr(e, "response", {}).get("Error", {}).get("Code") == "ConditionalCheckFailedException" or type(e).__name__ == "ConditionalCheckFailedException":
+            return {"statusCode": 404, "body": {"message": "Park not found"}}
+        logger.error(f"Error updating park: {e}")
+        return {"statusCode": 500, "body": {"message": "Error updating park"}}
+
+    return {"statusCode": 200, "body": _to_park(resp.get("Attributes", {}))}

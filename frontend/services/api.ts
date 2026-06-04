@@ -82,6 +82,13 @@ export const deletePark = async (parkId: string): Promise<void> => {
   });
 };
 
+export const updatePark = async (parkId: string, data: Partial<Park>): Promise<Park> => {
+  return await fetchApi<Park>(`/parks/${parkId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+};
+
 // ─── Roles ───────────────────────────────────────────────────────────────────
 
 export const getAllRoles = async (): Promise<VolunteerRole[]> => {
