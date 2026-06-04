@@ -184,6 +184,7 @@ function ParksTab() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ id: '', name: '', location: '', trail: '', latitude: '', longitude: '' });
   const [creating, setCreating] = useState(false);
+  const [editingParkId, setEditingParkId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -230,6 +231,28 @@ function ParksTab() {
     const lngNum = form.longitude ? parseFloat(form.longitude) : undefined;
 
     setCreating(true);
+    
+    if (editingParkId) {
+      try {
+        const updatedPark = await api.updatePark(editingParkId, {
+          name: form.name,
+          location: form.location,
+          trail: form.trail,
+          latitude: latNum,
+          longitude: lngNum,
+        });
+        setParks(prev => prev.map(p => p.id === editingParkId ? updatedPark : p));
+        setShowCreate(false);
+        setEditingParkId(null);
+        setForm({ id: '', name: '', location: '', trail: '', latitude: '', longitude: '' });
+      } catch {
+        Alert.alert('Error', 'Could not update park.');
+      } finally {
+        setCreating(false);
+      }
+      return;
+    }
+
     try {
       const newPark = await api.createPark({
         id: form.id,
@@ -265,7 +288,8 @@ function ParksTab() {
               const maxId = Math.max(...parks.map(p => parseInt(p.id, 10) || 0));
               nextId = (maxId > 0 ? maxId + 1 : 1001).toString().padStart(4, '0');
             }
-            setForm(f => ({ ...f, id: nextId }));
+            setForm({ id: nextId, name: '', location: '', trail: '', latitude: '', longitude: '' });
+            setEditingParkId(null);
             setShowCreate(true);
           }}>
             <Ionicons name="add" size={18} color="#fff" />
@@ -276,9 +300,25 @@ function ParksTab() {
           <View key={p.id} style={styles.eventCard}>
             <View style={styles.rowBetween}>
               <Text style={styles.eventLocation}>{p.name} (ID: {p.id})</Text>
-              <Pressable style={styles.cancelBtn} onPress={() => handleDelete(p.id)}>
-                <Ionicons name="trash-outline" size={16} color={colors.alert} />
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: 15, alignItems: 'center' }}>
+                <Pressable onPress={() => {
+                  setEditingParkId(p.id);
+                  setForm({
+                    id: p.id,
+                    name: p.name,
+                    location: p.location,
+                    trail: p.trail || '',
+                    latitude: p.latitude !== undefined ? String(p.latitude) : '',
+                    longitude: p.longitude !== undefined ? String(p.longitude) : ''
+                  });
+                  setShowCreate(true);
+                }}>
+                  <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+                </Pressable>
+                <Pressable onPress={() => handleDelete(p.id)}>
+                  <Ionicons name="trash-outline" size={16} color={colors.alert} />
+                </Pressable>
+              </View>
             </View>
             <Text style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginTop: 2 }}>
               {p.location}
@@ -304,15 +344,16 @@ function ParksTab() {
       <Modal transparent visible={showCreate} animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>New Park</Text>
+            <Text style={styles.modalTitle}>{editingParkId ? 'Edit Park' : 'New Park'}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, editingParkId && { opacity: 0.5 }]}
               placeholder="4-Digit ID (e.g. 1234)"
               placeholderTextColor={colors.muted}
               value={form.id}
               onChangeText={(v) => setForm((f) => ({ ...f, id: v }))}
               keyboardType="number-pad"
               maxLength={4}
+              editable={!editingParkId}
             />
             <TextInput
               style={styles.input}
@@ -354,11 +395,11 @@ function ParksTab() {
               />
             </View>
             <View style={styles.modalBtns}>
-              <Pressable style={styles.modalCancelBtn} onPress={() => setShowCreate(false)}>
+              <Pressable style={styles.modalCancelBtn} onPress={() => { setShowCreate(false); setEditingParkId(null); }}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </Pressable>
               <Pressable style={[styles.modalCreateBtn, creating && styles.btnDisabled]} onPress={handleCreate} disabled={creating}>
-                {creating ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalCreateText}>Create</Text>}
+                {creating ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalCreateText}>{editingParkId ? 'Save' : 'Create'}</Text>}
               </Pressable>
             </View>
           </View>
@@ -375,7 +416,7 @@ function EventsTab() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ park_id: '', scheduled_time: new Date(), weather_note: '' });
+  const [form, setForm] = useState({ park_id: '', scheduled_date: '', scheduled_time: '', weather_note: '' });
   const [creating, setCreating] = useState(false);
   const [attendeesModalMeetup, setAttendeesModalMeetup] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -405,8 +446,8 @@ function EventsTab() {
   };
 
   const handleCreate = async () => {
-    if (!form.park_id || !form.scheduled_time) {
-      Alert.alert('Missing Fields', 'Please select a park and date/time.');
+    if (!form.park_id || !form.scheduled_date || !form.scheduled_time) {
+      Alert.alert('Missing Fields', 'Please select a park, date, and time.');
       return;
     }
 
@@ -414,13 +455,13 @@ function EventsTab() {
     try {
       const newMeetup = await api.createMeetup({
         park_id: form.park_id,
-        scheduled_time: form.scheduled_time.toISOString(),
+        scheduled_time: new Date(`${form.scheduled_date}T${form.scheduled_time}:00`).toISOString(),
         status: 'active',
         weather_note: form.weather_note,
       });
       setMeetups((prev) => [...prev, newMeetup]);
       setShowCreate(false);
-      setForm({ park_id: '', scheduled_time: new Date(), weather_note: '' });
+      setForm({ park_id: parks.length > 0 ? parks[0].id : '', scheduled_date: '', scheduled_time: '', weather_note: '' });
     } catch {
       Alert.alert('Error', 'Could not create meetup.');
     } finally {
@@ -438,7 +479,10 @@ function EventsTab() {
       >
         <View style={styles.rowBetween}>
           <Text style={styles.pageTitle}>Manage Events</Text>
-          <Pressable style={styles.createBtn} onPress={() => setShowCreate(true)}>
+          <Pressable style={styles.createBtn} onPress={() => {
+            setForm({ park_id: parks.length > 0 ? parks[0].id : '', scheduled_date: '', scheduled_time: '', weather_note: '' });
+            setShowCreate(true);
+          }}>
             <Ionicons name="add" size={18} color="#fff" />
             <Text style={styles.createBtnText}>New</Text>
           </Pressable>
@@ -470,7 +514,7 @@ function EventsTab() {
               {new Date(m.scheduled_time).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </Text>
             {m.weather_note ? <Text style={styles.eventWeather}>{m.weather_note}</Text> : null}
-            
+
             <View style={{ marginTop: spacing.md, flexDirection: 'row' }}>
               <Pressable
                 style={[styles.badge, styles.badgeVol, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
@@ -485,10 +529,10 @@ function EventsTab() {
       </ScrollView>
 
       {/* Attendee Modal */}
-      <AttendeeListModal 
-        visible={!!attendeesModalMeetup} 
-        onClose={() => setAttendeesModalMeetup(null)} 
-        meetupId={attendeesModalMeetup || undefined} 
+      <AttendeeListModal
+        visible={!!attendeesModalMeetup}
+        onClose={() => setAttendeesModalMeetup(null)}
+        meetupId={attendeesModalMeetup || undefined}
       />
 
       {/* Create Modal */}
@@ -523,63 +567,67 @@ function EventsTab() {
                 <input
                   type="date"
                   style={{ padding: 10, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, flex: 1, backgroundColor: colors.background, color: colors.text, fontSize: fontSizes.md }}
-                  value={form.scheduled_time.toISOString().split('T')[0]}
-                  onChange={(e: any) => {
-                    const newDate = new Date(form.scheduled_time);
-                    const [y, m, d] = e.target.value.split('-');
-                    if(y) {
-                      newDate.setFullYear(parseInt(y), parseInt(m)-1, parseInt(d));
-                      setForm(f => ({ ...f, scheduled_time: newDate }));
-                    }
-                  }}
+                  value={form.scheduled_date}
+                  onChange={(e: any) => setForm(f => ({ ...f, scheduled_date: e.target.value }))}
                 />
                 {/* @ts-ignore */}
                 <input
                   type="time"
                   style={{ padding: 10, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, flex: 1, backgroundColor: colors.background, color: colors.text, fontSize: fontSizes.md }}
-                  value={form.scheduled_time.toTimeString().slice(0, 5)}
-                  onChange={(e: any) => {
-                    const newDate = new Date(form.scheduled_time);
-                    const [h, min] = e.target.value.split(':');
-                    if(h) {
-                      newDate.setHours(parseInt(h), parseInt(min));
-                      setForm(f => ({ ...f, scheduled_time: newDate }));
-                    }
-                  }}
+                  value={form.scheduled_time}
+                  onChange={(e: any) => setForm(f => ({ ...f, scheduled_time: e.target.value }))}
                 />
               </View>
             ) : Platform.OS === 'ios' ? (
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: spacing.sm, alignItems: 'center' }}>
                 <Text style={{ color: colors.textSecondary }}>Date/Time:</Text>
                 <DateTimePicker
-                  value={form.scheduled_time}
+                  value={(form.scheduled_date && form.scheduled_time) ? new Date(`${form.scheduled_date}T${form.scheduled_time}:00`) : new Date()}
                   mode="datetime"
                   display="default"
                   onChange={(event, selectedDate) => {
-                    const currentDate = selectedDate || form.scheduled_time;
-                    setForm(f => ({ ...f, scheduled_time: currentDate }));
+                    if (selectedDate) {
+                      const y = selectedDate.getFullYear();
+                      const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                      const d = String(selectedDate.getDate()).padStart(2, '0');
+                      const h = String(selectedDate.getHours()).padStart(2, '0');
+                      const min = String(selectedDate.getMinutes()).padStart(2, '0');
+                      setForm(f => ({ ...f, scheduled_date: `${y}-${m}-${d}`, scheduled_time: `${h}:${min}` }));
+                    }
                   }}
                 />
               </View>
             ) : (
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: spacing.sm }}>
                 <Pressable style={[styles.input, { flex: 1, marginBottom: 0, justifyContent: 'center' }]} onPress={() => setShowDatePicker(true)}>
-                  <Text style={{ color: colors.text }}>{form.scheduled_time.toLocaleDateString()}</Text>
+                  <Text style={{ color: form.scheduled_date ? colors.text : colors.muted }}>
+                    {form.scheduled_date ? new Date(`${form.scheduled_date}T00:00:00`).toLocaleDateString() : 'Select Date'}
+                  </Text>
                 </Pressable>
                 <Pressable style={[styles.input, { flex: 1, marginBottom: 0, justifyContent: 'center' }]} onPress={() => setShowTimePicker(true)}>
-                  <Text style={{ color: colors.text }}>{form.scheduled_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                  <Text style={{ color: form.scheduled_time ? colors.text : colors.muted }}>
+                    {form.scheduled_time ? new Date(`1970-01-01T${form.scheduled_time}:00`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+                  </Text>
                 </Pressable>
                 {(showDatePicker || showTimePicker) && (
                   <DateTimePicker
-                    value={form.scheduled_time}
+                    value={(form.scheduled_date && form.scheduled_time) ? new Date(`${form.scheduled_date}T${form.scheduled_time}:00`) : new Date()}
                     mode={showDatePicker ? 'date' : 'time'}
                     display="default"
                     onChange={(event, selectedDate) => {
-                      const currentDate = selectedDate || form.scheduled_time;
                       setShowDatePicker(false);
                       setShowTimePicker(false);
-                      if (event.type === 'set') {
-                        setForm(f => ({ ...f, scheduled_time: currentDate }));
+                      if (event.type === 'set' && selectedDate) {
+                        if (showDatePicker) {
+                          const y = selectedDate.getFullYear();
+                          const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                          const d = String(selectedDate.getDate()).padStart(2, '0');
+                          setForm(f => ({ ...f, scheduled_date: `${y}-${m}-${d}` }));
+                        } else {
+                          const h = String(selectedDate.getHours()).padStart(2, '0');
+                          const min = String(selectedDate.getMinutes()).padStart(2, '0');
+                          setForm(f => ({ ...f, scheduled_time: `${h}:${min}` }));
+                        }
                       }
                     }}
                   />
@@ -691,7 +739,7 @@ function RolesTab() {
 
   return (
     <ScrollView contentContainerStyle={styles.tabContent}>
-      
+
       <Text style={styles.pageTitle}>Manage Roles</Text>
       <View style={{ marginBottom: spacing.lg }}>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: spacing.md }}>

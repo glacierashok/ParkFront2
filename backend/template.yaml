@@ -266,6 +266,11 @@ Resources:
           Properties:
             Path: /parks/{id}
             Method: DELETE
+        UpdatePark:
+          Type: Api
+          Properties:
+            Path: /parks/{id}
+            Method: PUT
 
         # ── Roles
         GetAllRoles:
