@@ -14,7 +14,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { openDirections } from '../utils/map';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
 import { Meetup } from '../types';
@@ -145,22 +146,39 @@ export default function IndexScreen() {
           <View style={styles.brandTextWrap}>
             <Text style={styles.brandTitle}>Neighborhood Stride</Text>
             <Text style={styles.brandSub}>
-              {meetup ? `Join us for our next walk at ${meetup.location}! ${meetup.weather_note} We meet up for fresh air, new friends, and great vibes.` : 'Join your community for organized weekend walks and jogs. We explore local trails, meet new friends, and build a healthier neighborhood together.'}
+              {meetup ? `Join us for our next walk at ${currentPark?.name || meetup.location || 'the park'}! ${meetup.weather_note ? meetup.weather_note + ' ' : ''}We meet up for fresh air, new friends, and great vibes.` : 'Join your community for organized weekend walks and jogs. We explore local trails, meet new friends, and build a healthier neighborhood together.'}
             </Text>
           </View>
         </View>
 
-        {/* ── Map Trail Button ─────────────────────────────────────────── */}
-        <Pressable
-          style={({ pressed }) => [styles.mapTrailBtn, pressed && { opacity: 0.75 }]}
-          onPress={() => setMapVisible(true)}
-          accessibilityLabel="View park trail map"
-          accessibilityRole="button"
-        >
-          <Ionicons name="map-outline" size={18} color="#fff" />
-          <Text style={styles.mapTrailBtnText}>View Park Trail Map</Text>
-          <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.6)" />
-        </Pressable>
+        {/* ── Map & Directions Buttons ─────────────────────────────────────────── */}
+        <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: spacing.xl, marginTop: spacing.sm, marginBottom: spacing.xs }}>
+          <Pressable
+            style={({ pressed }) => [[styles.mapTrailBtn, { marginHorizontal: 0, marginTop: 0, marginBottom: 0, flex: 1 }], pressed && { opacity: 0.75 }]}
+            onPress={() => setMapVisible(true)}
+            accessibilityLabel="View park trail map"
+            accessibilityRole="button"
+          >
+            <Ionicons name="map-outline" size={18} color="#fff" />
+            <Text style={styles.mapTrailBtnText}>Trail Map</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [[styles.mapTrailBtn, { marginHorizontal: 0, marginTop: 0, marginBottom: 0, flex: 1, backgroundColor: 'rgba(34, 197, 94, 0.25)', borderColor: 'rgba(34, 197, 94, 0.45)' }], pressed && { opacity: 0.75 }]}
+            onPress={() => {
+              if (currentPark) {
+                openDirections(currentPark.name, currentPark.location, currentPark.latitude, currentPark.longitude);
+              } else if (meetup) {
+                openDirections(meetup.location || 'Park', '', meetup.latitude, meetup.longitude);
+              }
+            }}
+            accessibilityLabel="Get Directions"
+            accessibilityRole="button"
+          >
+            <Ionicons name="navigate-outline" size={18} color="#fff" />
+            <Text style={styles.mapTrailBtnText}>Directions</Text>
+          </Pressable>
+        </View>
 
         {/* ── Also Coming Up ───────────────────────────────────────────── */}
         {nextNextMeetup && (
@@ -315,6 +333,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     fontWeight: fontWeights.semibold,
     color: '#fff',
+    textAlign: 'center',
   },
 
   brandIconWrap: {

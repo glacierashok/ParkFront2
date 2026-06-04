@@ -22,6 +22,7 @@ import EventTopBar from '../../components/EventTopBar';
 import AppBackground from '../../components/AppBackground';
 import CurrentWeatherStrip from '../../components/CurrentWeatherStrip';
 import ParkMapModal from '../../components/ParkMapModal';
+import { openDirections } from '../../utils/map';
 
 const PARK_COORDS = { latitude: 40.7812, longitude: -73.9665 }; // Placeholder coords
 const GEOFENCE_RADIUS_METERS = 300;
@@ -243,17 +244,35 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* ── Map Trail Button ─────────────────────────────────────────── */}
-          <Pressable
-            style={({ pressed }) => [styles.mapTrailBtn, pressed && { opacity: 0.75 }]}
-            onPress={() => setMapVisible(true)}
-            accessibilityLabel="View park trail map"
-            accessibilityRole="button"
-          >
-            <Ionicons name="map-outline" size={18} color="#fff" />
-            <Text style={styles.mapTrailBtnText}>View Park Trail Map</Text>
-            <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.6)" />
-          </Pressable>
+          {/* ── Map & Directions Buttons ─────────────────────────────────────────── */}
+          <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: spacing.xl, marginTop: spacing.sm, marginBottom: spacing.xs }}>
+            <Pressable
+              style={({ pressed }) => [[styles.mapTrailBtn, { marginHorizontal: 0, marginTop: 0, marginBottom: 0, flex: 1 }], pressed && { opacity: 0.75 }]}
+              onPress={() => setMapVisible(true)}
+              accessibilityLabel="View park trail map"
+              accessibilityRole="button"
+            >
+              <Ionicons name="map-outline" size={18} color="#fff" />
+              <Text style={styles.mapTrailBtnText}>Trail Map</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [[styles.mapTrailBtn, { marginHorizontal: 0, marginTop: 0, marginBottom: 0, flex: 1, backgroundColor: 'rgba(34, 197, 94, 0.25)', borderColor: 'rgba(34, 197, 94, 0.45)' }], pressed && { opacity: 0.75 }]}
+              onPress={() => {
+                const targetPark = meetup?.park_id ? parks[meetup.park_id] : null;
+                if (targetPark) {
+                  openDirections(targetPark.name, targetPark.location, targetPark.latitude, targetPark.longitude);
+                } else if (meetup) {
+                  openDirections(meetup.location || 'Park', '', meetup.latitude, meetup.longitude);
+                }
+              }}
+              accessibilityLabel="Get Directions"
+              accessibilityRole="button"
+            >
+              <Ionicons name="navigate-outline" size={18} color="#fff" />
+              <Text style={styles.mapTrailBtnText}>Directions</Text>
+            </Pressable>
+          </View>
 
           {/* ── Stats row ────────────────────────────────────────────── */}
           <Text style={styles.sectionTitle}>Your Activity</Text>
@@ -523,6 +542,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     fontWeight: fontWeights.semibold,
     color: '#fff',
+    textAlign: 'center',
   },
 
   sectionTitle: { fontSize: fontSizes.lg, fontWeight: fontWeights.bold, color: '#fff', marginBottom: spacing.md, paddingHorizontal: spacing.xs },
