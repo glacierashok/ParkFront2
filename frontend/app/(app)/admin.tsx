@@ -55,11 +55,13 @@ export default function AdminScreen() {
         ))}
       </ScrollView>
 
-      {tab === 'overview' && <OverviewTab />}
-      {tab === 'parks' && <ParksTab />}
-      {tab === 'events' && <EventsTab />}
-      {tab === 'roles' && <RolesTab />}
-      {tab === 'hours' && <HoursTab />}
+      <View style={{ flex: 1 }}>
+        {tab === 'overview' && <OverviewTab />}
+        {tab === 'parks' && <ParksTab />}
+        {tab === 'events' && <EventsTab />}
+        {tab === 'roles' && <RolesTab />}
+        {tab === 'hours' && <HoursTab />}
+      </View>
     </SafeAreaView>
   );
 }
@@ -471,6 +473,11 @@ function EventsTab() {
 
   if (loading) return <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />;
 
+  const nowMs = Date.now();
+  const upcomingMeetups = meetups
+    .filter(m => new Date(m.scheduled_time).getTime() > nowMs - 4 * 60 * 60 * 1000)
+    .sort((a, b) => new Date(a.scheduled_time).getTime() - new Date(b.scheduled_time).getTime());
+
   return (
     <>
       <ScrollView
@@ -487,7 +494,7 @@ function EventsTab() {
             <Text style={styles.createBtnText}>New</Text>
           </Pressable>
         </View>
-        {meetups.map((m) => (
+        {upcomingMeetups.map((m) => (
           <View key={m.id} style={styles.eventCard}>
             <View style={styles.rowBetween}>
               <View style={[styles.badge, m.status === 'active' ? styles.badgeVol : styles.badgeAlert]}>
@@ -890,7 +897,7 @@ function HoursTab() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  tabBarScroll: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, flexGrow: 0 },
+  tabBarScroll: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, flexGrow: 0, flexShrink: 0 },
   tabBar: { flexDirection: 'row', gap: spacing.sm, padding: spacing.sm },
   tabChip: {
     flexDirection: 'row',
