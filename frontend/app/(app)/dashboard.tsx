@@ -370,25 +370,20 @@ export default function DashboardScreen() {
                         style={({ pressed }) => [
                           styles.rsvpBtnLarge,
                           {
-                            backgroundColor: inPark ? colors.primary : 'rgba(59, 130, 246, 0.12)',
+                            backgroundColor: colors.primary,
                             borderColor: colors.primary,
                             borderWidth: 2
                           },
-                          pressed && inPark && { opacity: 0.8 }
+                          pressed && { opacity: 0.8 }
                         ]}
                         onPress={handleCheckIn}
-                        disabled={!inPark || !!rsvpLoading}
+                        disabled={!!rsvpLoading}
                       >
-                        <Ionicons name="location" size={24} color={inPark ? '#fff' : colors.primary} />
-                        <Text style={[styles.rsvpBtnTextLarge, { color: inPark ? '#fff' : colors.primary }]}>
-                          {inPark ? "Check In Now" : `Check In (${calculatedDistance !== null ? Math.round(calculatedDistance) + 'm' : 'Too'} far)`}
+                        <Ionicons name="location" size={24} color="#fff" />
+                        <Text style={[styles.rsvpBtnTextLarge, { color: '#fff' }]}>
+                          Check In Now
                         </Text>
                       </Pressable>
-                      {!inPark && userLocation && (
-                        <Text style={{ fontSize: fontSizes.xs, color: 'rgba(255, 255, 255, 0.7)', marginTop: spacing.xs, textAlign: 'center' }}>
-                          Current GPS: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)} | Target: {(meetup?.park_id && parks[meetup.park_id]?.latitude ? parks[meetup.park_id].latitude! : (meetup?.latitude ?? PARK_COORDS.latitude)).toFixed(4)}, {(meetup?.park_id && parks[meetup.park_id]?.longitude ? parks[meetup.park_id].longitude! : (meetup?.longitude ?? PARK_COORDS.longitude)).toFixed(4)}
-                        </Text>
-                      )}
                     </View>
                   )}
                   {checkInVisible && rsvp?.attended && (
